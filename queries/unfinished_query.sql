@@ -1,0 +1,1 @@
+select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE  finished_date is NULL order by fib_id  LIMIT 100
