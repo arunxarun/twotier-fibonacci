@@ -6,3 +6,9 @@
 deploy/web/
 
 deploy/worker/
+
+*.pyc
+
+*.pyc
+
+data/test/test_fib_data_db.pyc
