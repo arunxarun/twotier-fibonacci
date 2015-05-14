@@ -76,6 +76,8 @@ class WorkerData(object):
     def __init__(self, fibData):
         self.fibData = fibData
         self.formattedStartDate = prettyPrintTime(fibData.startedDate)
+        if fibData.finishedDate != None:
+            self.formattedFinishDate = prettyPrintTime(fibData.finishedDate)
         self.runTime = nowInSeconds() - fibData.startedDate
         
 class FormattedRequest(object):
@@ -296,26 +298,26 @@ class FibDataDB(object):
             if isDescending == True:
                 if worker == None:
                     if isPending == False:
-                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata order by fib_id DESC LIMIT %d'%limit
+                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE finished_date IS NOT NULL ORDER BY fib_id DESC LIMIT %d'%limit
                     else:
-                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE finished_date is NULL order by fib_id DESC LIMIT %d'%limit
+                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE finished_date IS NULL ORDER BY fib_id DESC LIMIT %d'%limit
                 else: 
                     if isPending == False:
-                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' order by fib_id DESC LIMIT %d"%(worker,limit)
+                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' and finished_date IS NOT  NULL ORDER BY fib_id DESC LIMIT %d"%(worker,limit)
                     else:
-                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' and finished_date is NULL order by fib_id DESC LIMIT %d"%(worker,limit)
+                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' and finished_date IS NULL ORDER BY fib_id DESC LIMIT %d"%(worker,limit)
                         
             else:
                 if worker == None:
                     if isPending == False:
-                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata order by fib_id LIMIT %d'%limit # will order ASC because message_id is the primary key
+                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE  finished_date IS NOT NULL ORDER BY fib_id LIMIT %d'%limit # will order ASC because message_id is the primary key
                     else:
-                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE  finished_date is NULL order by fib_id LIMIT %d'%limit # will order ASC because message_id is the primary key
+                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE  finished_date IS NULL ORDER BY fib_id LIMIT %d'%limit # will order ASC because message_id is the primary key
                 else:
                     if isPending == False:
-                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' order by fib_id  LIMIT %d"%(worker,limit) # will order ASC because message_id is the primary key
+                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' and finished_date IS NOT NULL ORDER BY fib_id  LIMIT %d"%(worker,limit) # will order ASC because message_id is the primary key
                     else:
-                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' and finished_date is NULL order by fib_id  LIMIT %d"%(worker,limit) # will order ASC because message_id is the primary key
+                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' and finished_date IS NULL ORDER BY fib_id  LIMIT %d"%(worker,limit) # will order ASC because message_id is the primary key
             
             cur = db.cursor()
             cur.execute(query)

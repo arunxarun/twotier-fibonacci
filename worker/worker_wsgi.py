@@ -13,39 +13,12 @@ from threading import Thread
 import json
 from date_formatting_utils import nowInSeconds, prettyPrintTime
 from time import sleep
+from response_handler import ResponseHandler
 STATIC_ROOT = os.path.join(os.path.dirname(__file__), 'static')
 
-logging.basicConfig()
-log = logging.getLogger('receiver')
-log.setLevel(logging.DEBUG)
-
-
-
-log.debug("setting up db connection...")
-
-try:
-    mysql_url = urlparse.urlparse(os.environ['MYSQL_URL'])
-except KeyError:
-    log.warn("env variable MYSQL_URL not found, reverting to DATABASE_URL")
-    mysql_url = urlparse.urlparse(os.environ['DATABASE_URL'])
-
-
-fibDataDB = initializeDB(mysql_url)
-
-log.debug("setting up message queue")
-
-rabbit_url = os.environ['RABBITMQ_URL']
-queue_name = os.environ['QUEUE_NAME']
-rest_interval  = int(os.getenv('REST_INTERVAL',5))
-log.debug("rabbit mq url:%s"%os.environ['RABBITMQ_URL'])
-
-messageQueue = MessageQueue(rabbit_url)
-
-messageQueue.createQueue(queue_name)
-
-log.debug("generating worker ID")
-
-workerId = uuid.uuid1()
+responseHandler = None
+fibDataDB = None
+messageQueue = None
 
 '''
 message queue processing thread logic
@@ -76,11 +49,9 @@ def getMessages(messageQueue, fibDataDB, workerId):
             log.debug('about to sleep %d seconds'%rest_interval)
             sleep(rest_interval)
     
-# need to receive messages async so that the process can also handle web requests.
 
-t = Thread(name='daemon', target=getMessages, args = (messageQueue,fibDataDB,workerId,))
-t.setDaemon(True)
-t.start()
+
+         
 
 '''
 view routes
@@ -93,24 +64,28 @@ def home():
     
 @get('/inprocess') 
 def getInProcess():
+    try: 
+        return responseHandler.getInProcess()
+    except:
+        return "internal error",500
     
-    log.debug("handling /inprocess path")
-    
-    allRequestData = fibDataDB.getRequests(isPending=True)
-    
-    workerInfo = []
-    for request in allRequestData:
-        workerInfo.append(WorkerData(request))
-        
-        
-    return json.dumps(workerInfo,cls=DataEncoder)
 
+
+@get('/complete')
+def getComplete():
+    try:
+        return responseHandler.getComplete()
+    except:
+        return "internal error",500
+    
+    
 @get('/instance')
 def getInstance():
-    log.debug('generating internal id')
-    uid = uuid.uuid1()
+    try:
+        return responseHandler.getInstance()
+    except:
+        return "internal error",500
     
-    return "{'instance-id':'%s'}"%uid
 
 '''
 Fibonacci sequence, recursive
@@ -134,6 +109,46 @@ def serve_static(filename):
 '''
 service runner code
 '''
+
+logging.basicConfig()
+log = logging.getLogger('worker')
+log.setLevel(logging.DEBUG)
+
+
+log.debug("setting up db connection...")
+
+try:
+    mysql_url = urlparse.urlparse(os.environ['MYSQL_URL'])
+except KeyError:
+    log.warn("env variable MYSQL_URL not found, reverting to DATABASE_URL")
+    mysql_url = urlparse.urlparse(os.environ['DATABASE_URL'])
+
+
+fibDataDB = initializeDB(mysql_url)
+
+log.debug("setting up message queue")
+
+rabbit_url = os.environ['RABBITMQ_URL']
+queue_name = os.environ['QUEUE_NAME']
+rest_interval  = int(os.getenv('REST_INTERVAL',5))
+log.debug("rabbit mq url:%s"%os.environ['RABBITMQ_URL'])
+
+messageQueue = MessageQueue(rabbit_url)
+
+messageQueue.createQueue(queue_name)
+
+log.debug("generating worker ID")
+
+workerId = uuid.uuid1()
+
+# need to receive messages async so that the process can also handle web requests.
+
+t = Thread(name='daemon', target=getMessages, args = (messageQueue,fibDataDB,workerId,))
+t.setDaemon(True)
+t.start()
+
+responseHandler = ResponseHandler(workerId,fibDataDB)
+
 log.debug("starting web server")
 application = bottle.app()
 application.catchall = False

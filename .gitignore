@@ -12,3 +12,7 @@ deploy/worker/
 *.pyc
 
 data/test/test_fib_data_db.pyc
+
+*.pyc
+
+messaging/test/test_utils.pyc

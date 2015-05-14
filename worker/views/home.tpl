@@ -17,12 +17,8 @@
 	   
 	    <div class="container" >
 		    <h2>Fibonacci Calculations In Process</h2>
-		    
-			<br/>
-			<div id="result">
-			</div>
 		    <br/>
-		 	<table id="messages" class="display" cellspacing="0">
+			<table id="inprocess" class="display" cellspacing="0">
 		        <thead>
 		            <tr>
 		        	 	<th>sequence id</th>
@@ -38,6 +34,33 @@
 		                <th>sequence value</th>
 		                <th>date created</th>
 		                <th>time spent(seconds)</th>              
+		            </tr>
+		        </tfoot>
+		 
+		        <tbody>
+		        </tbody>
+			</table>
+			
+			<br/>
+			
+			<table id="complete" class="display" cellspacing="0">
+		        <thead>
+		            <tr>
+		        	 	<th>sequence id</th>
+		                <th>sequence value</th>
+		                <th>worker</th>
+		                <th>date created</th>
+		                <th>date finished</th>
+		            </tr>
+		        </thead>
+		 
+		        <tfoot>
+		            <tr>
+		                <th>sequence id</th>
+		                <th>sequence value</th>
+		                <th>worker</th>
+		                <th>date created</th>
+		                <th>date finished</th>              
 		            </tr>
 		        </tfoot>
 		 

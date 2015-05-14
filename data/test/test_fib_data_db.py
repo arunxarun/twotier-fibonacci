@@ -95,7 +95,7 @@ class Test(unittest.TestCase):
             fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
             
             newFd = fibDataDB.addRequest(fd)
-            fdArr = fibDataDB.getRequests()
+            fdArr = fibDataDB.getRequests(isPending = True)
             
             self.assertTrue(len(fdArr) > 0)
             
@@ -104,11 +104,14 @@ class Test(unittest.TestCase):
             self.assertTrue(testFd.workerId == newFd.workerId)
             self.assertTrue(testFd.fibId == newFd.fibId)
             
-            fdArr2 = fibDataDB.getRequests(isDescending=False)
+            fdArr2 = fibDataDB.getRequests(isPending = True,isDescending=False)
             self.assertTrue(len(fdArr2) == 1)
             testFd2 = fdArr2[0]
             self.assertTrue(testFd2.workerId == newFd.workerId)
             self.assertTrue(testFd2.fibId == newFd.fibId)
+            
+            fdArr3 = fibDataDB.getRequests()
+            self.assertTrue(len(fdArr3) == 0)
         except:
             e = sys.exc_info()[0]
             print e
@@ -167,18 +170,21 @@ class Test(unittest.TestCase):
             fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
             
             newFd = fibDataDB.addRequest(fd)
-            fdArr = fibDataDB.getRequests(worker="abcd")
+            fdArr = fibDataDB.getRequests(worker="abcd", isPending = True)
             
             self.assertTrue(len(fdArr) == 1)
             testFd = fdArr[0]
             self.assertTrue(testFd.workerId == newFd.workerId)
             self.assertTrue(testFd.fibId == newFd.fibId)
             
-            fdArr2 = fibDataDB.getRequests(worker="abcd",isDescending=False)
+            fdArr2 = fibDataDB.getRequests(worker="abcd",isPending = True,isDescending=False)
             self.assertTrue(len(fdArr2) == 1)
             testFd2 = fdArr2[0]
             self.assertTrue(testFd2.workerId == newFd.workerId)
             self.assertTrue(testFd2.fibId == newFd.fibId)
+            
+            fdArr3 = fibDataDB.getRequests(worker="abcd")
+            self.assertTrue(len(fdArr3) == 0)
             
             
             
@@ -197,8 +203,7 @@ class Test(unittest.TestCase):
             newFd = fibDataDB.addRequest(fd)
             fdArr = fibDataDB.getRequests(worker="abcd")
             
-            self.assertTrue(len(fdArr) == 1)
-            testFd = fdArr[0]
+            self.assertTrue(len(fdArr) == 0)
             
             
             fd2Arr = fibDataDB.getRequests(isPending = True) # no worker, pending
@@ -226,7 +231,7 @@ class Test(unittest.TestCase):
             newFd = fibDataDB.addRequest(fd)
             fdArr = fibDataDB.getRequests(worker="abcd")
             
-            self.assertTrue(len(fdArr) == 1)
+            self.assertTrue(len(fdArr) == 0)
             
             testFd = fdArr[0]
             
@@ -253,7 +258,7 @@ class Test(unittest.TestCase):
             fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
             
             newFd = fibDataDB.addRequest(fd)
-            fdArr = fibDataDB.getRequests(worker="abcd")
+            fdArr = fibDataDB.getRequests(worker="abcd", isPending = True)
             
             self.assertTrue(len(fdArr) == 1)
             testFd = fdArr[0]
@@ -274,19 +279,19 @@ class Test(unittest.TestCase):
             startedDate = nowInSeconds()
             fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
             
-            newFd = fibDataDB.addRequest(fd)
+            fibDataDB.addRequest(fd)
             fdArr = fibDataDB.getRequests(worker="abcd")
             
-            self.assertTrue(len(fdArr) == 1)
-            testFd = fdArr[0]
+            self.assertTrue(len(fdArr) == 0)
             
             
-            fd2Arr = fibDataDB.getRequests(worker = "abcd", isPending = True,isDescending = False) # no worker, pending, not descending
+            
+            fd2Arr = fibDataDB.getRequests(worker = "abcd", isPending = True,isDescending = False) #  worker, pending, not descending
             self.assertTrue(len(fd2Arr) == 1)
             test2Fd = fd2Arr[0]
             
             fibDataDB.updateRequest(test2Fd)
-            fd3Arr = fibDataDB.getRequests(worker = "abcd", isPending = True,isDescending = False) # no worker, pending, not descending
+            fd3Arr = fibDataDB.getRequests(worker = "abcd", isPending = True,isDescending = False) #  worker, pending, not descending
             self.assertTrue(len(fd3Arr) == 0)
             
         except:
@@ -294,7 +299,27 @@ class Test(unittest.TestCase):
             print e
             self.fail(e) 
             
-            
+    def test12Add_UpdateRequest_FetchAllCompleteTasks(self):
+        
+        fibDataDB = initializeFibDataDB(self.testName)
+        finishedDate = nowInSeconds()
+        startedDate = finishedDate - 5;
+        fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate,"finished_date":finishedDate})
+        
+        fibDataDB.addRequest(fd)
+        fdArr = fibDataDB.getRequests(isPending = False)
+        
+        self.assertTrue(len(fdArr) == 1)
+        
+        startedDate = nowInSeconds()
+        
+        fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
+                
+        fibDataDB.addRequest(fd)
+        fdArr = fibDataDB.getRequests(isPending = False)
+        
+        self.assertTrue(len(fdArr) == 1)
+        
     def test13SerializeWorkerData(self):
         try:
             fibDataDB = initializeFibDataDB(self.testName)
@@ -304,7 +329,7 @@ class Test(unittest.TestCase):
             fibDataDB.addRequest(fd)
             fibDataDB.addRequest(fd2)
             
-            fdArr = fibDataDB.getRequests(worker="abcd")
+            fdArr = fibDataDB.getRequests(worker="abcd", isPending = True)
             
             self.assertTrue(len(fdArr) == 2)
             
