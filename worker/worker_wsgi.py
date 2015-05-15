@@ -5,7 +5,7 @@ import bottle
 import logging
 import urlparse
 import uuid
-from fib_data import  FibDataDB, DataEncoder, FibDataRequest,WorkerData
+from fib_data import  FibDataDB, DataEncoder, FibDataRequest,DisplayData
 from messages import Message,MessageQueue
 from bottle import route, get, post, request, template
 from startup_utils import initializeDB

@@ -5,7 +5,7 @@ Created on May 13, 2015
 '''
 import logging
 import json
-from fib_data import FibDataDB, FibDataRequest, WorkerData,DataEncoder
+from fib_data import FibDataDB, FibDataRequest, DisplayData,DataEncoder
 
 logging.basicConfig()
 
@@ -28,7 +28,7 @@ class ResponseHandler:
         
         workerInfo = []
         for request in allRequestData:
-            workerInfo.append(WorkerData(request))
+            workerInfo.append(DisplayData(request))
             
             
         return json.dumps(workerInfo,cls=DataEncoder)
@@ -39,7 +39,7 @@ class ResponseHandler:
         completeData = self.fibDataDB.getRequests(isPending=False)
         workerInfo = []
         for request in completeData:
-            workerInfo.append(WorkerData(request))
+            workerInfo.append(DisplayData(request))
             
         return json.dumps(workerInfo,cls=DataEncoder)
 

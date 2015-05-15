@@ -7,7 +7,7 @@ import unittest
 import urlparse
 import os
 import MySQLdb
-from fib_data import FibDataRequest, FibDataDB, WorkerData,DataEncoder
+from fib_data import FibDataRequest, FibDataDB, DisplayData,DataEncoder
 from test_dbutils import initializeFibDataDB
 from date_formatting_utils import nowInSeconds
 import sys

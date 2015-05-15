@@ -45,19 +45,19 @@ class FibDataRequest(object):
             if body.has_key('worker_id') == True:
                 self.workerId = body['worker_id']
             else:
-                fibDataLogger.error("invalid JSON format, sequence_id not found")
+                fibDataLogger.error("invalid JSON format, worker_id not found")
                 raise 'invalid format'
             
             if body.has_key('fib_id') == True:
                 self.fibId = body['fib_id']
             else:
-                fibDataLogger.error("invalid JSON format, sequence_id not found")
+                fibDataLogger.error("invalid JSON format, fib_id not found")
                 raise 'invalid format'
             
             if body.has_key('fib_value') == True:
                 self.fibValue = body['fib_value']
             else:
-                fibDataLogger.error("invalid JSON format, sequence_value  not found")
+                fibDataLogger.error("invalid JSON format, fib_value  not found")
                 raise 'invalid format'    
             
             if body.has_key('started_date'):
@@ -72,7 +72,7 @@ class FibDataRequest(object):
 
 
     
-class WorkerData(object):
+class DisplayData(object):
     def __init__(self, fibData):
         self.fibData = fibData
         self.formattedStartDate = prettyPrintTime(fibData.startedDate)
@@ -93,7 +93,7 @@ class FibDataDB(object):
     
     def __init__(self,url,dbName,userName,password):
         
-        self.log =  logging.getLogger('messageDB')
+        self.log =  logging.getLogger('FibDataDB')
         self.log.setLevel(logging.DEBUG)
         self.url= url
         self.dbName = dbName
