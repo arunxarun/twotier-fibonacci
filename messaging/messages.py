@@ -58,8 +58,12 @@ class MessageQueue:
         self.log.setLevel(logging.DEBUG)
         self.amqp_url = amqp_url
         self.channel = None
+        self.keepGoing = True
     
-       
+     
+    def stopProcessing(self):
+        self.keepGoing = False
+          
     def createQueue(self,queueName):
         self.log.debug("creating queue %s"%queueName)
         parameters = pika.URLParameters(self.amqp_url)
@@ -76,7 +80,7 @@ class MessageQueue:
         channel.queue_delete(queue=queueName)
         connection.close()
         
-    def getMessages(self, queue_name,messageCount):
+    def getMessages(self, queueName,messageCount):
         
         """
         pulls messages from the queue, for a specified count of messages
@@ -91,7 +95,7 @@ class MessageQueue:
         
         for i in range(0,messageCount):
             
-            method_frame, header_frame, body = channel.basic_get(queue_name)
+            method_frame, header_frame, body = channel.basic_get(queueName)
             if method_frame:
                 try:
                     self.log.debug("message %d, method frame = %s, header frame = %s"%(i,method_frame,header_frame))
@@ -105,7 +109,29 @@ class MessageQueue:
                 break
         self.log.debug("returning %d messages found"%len(messages))    
         return messages
+    
+    def getAndProcessMessages(self,queueName,processMessage,quitOnEmpty = False):
+        """
+        pulls messages from the queue, for a specified count of messages
+        """
+        parameters = pika.URLParameters(self.amqp_url)
+        connection = pika.BlockingConnection(parameters)
+
+        channel = connection.channel()
+        
+        while self.keepGoing == True:
+            method_frame, header_frame, body = channel.basic_get(queueName)
+            if method_frame:
+                try:
+                    self.log.debug("method frame = %s, header frame = %s"%(method_frame,header_frame))
+                    processMessage(self.extractMessage(body))
+                    channel.basic_ack(delivery_tag=method_frame.delivery_tag) 
+                except:
+                    self.log.error ("invalid format of message: method frame = %s, header frame = %s, removing message from queue")
+            elif quitOnEmpty == True:
+                    break
             
+                
     def extractMessage(self,messageBody):
         """
         puts the message in a Message classs
@@ -121,7 +147,7 @@ class MessageQueue:
         
         
         
-    def sendMessage(self, queue_name, message):
+    def sendMessage(self, queueName, message):
         parameters = pika.URLParameters(self.amqp_url)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel() 
@@ -129,7 +155,7 @@ class MessageQueue:
     
         json_body = json.dumps(message,cls=MessageEncoder)
          
-        channel.basic_publish(exchange='', routing_key=queue_name, body=json_body)
+        channel.basic_publish(exchange='', routing_key=queueName, body=json_body)
         connection.close()
                     
    
