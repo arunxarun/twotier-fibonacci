@@ -233,9 +233,6 @@ class Test(unittest.TestCase):
             
             self.assertTrue(len(fdArr) == 0)
             
-            testFd = fdArr[0]
-            
-            
             fd2Arr = fibDataDB.getRequests(worker = "abcd", isPending = True) # no worker, pending
             self.assertTrue(len(fd2Arr) == 1)
             test2Fd = fd2Arr[0]
@@ -320,7 +317,7 @@ class Test(unittest.TestCase):
         
         self.assertTrue(len(fdArr) == 1)
         
-    def test13SerializeWorkerData(self):
+    def test13SerializeDisplayData(self):
         try:
             fibDataDB = initializeFibDataDB(self.testName)
             startedDate = nowInSeconds()
@@ -333,13 +330,13 @@ class Test(unittest.TestCase):
             
             self.assertTrue(len(fdArr) == 2)
             
-            workerDataArr = []
+            displayDataArr = []
             
             
             for request in fdArr:
-                workerDataArr.append(WorkerData(request))
+                displayDataArr.append(DisplayData(request))
                 
-            str = json.dumps(workerDataArr,cls=DataEncoder)
+            str = json.dumps(displayDataArr,cls=DataEncoder)
             
             print str
             

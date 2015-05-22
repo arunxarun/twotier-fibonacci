@@ -5,15 +5,14 @@ import bottle
 import logging
 import urlparse
 import uuid
-from fib_data import  FibDataDB, DataEncoder, FibDataRequest,DisplayData
-from messages import Message,MessageQueue
-from bottle import route, get, post, request, template
+from fib_data import  FibDataRequest
+from messages import MessageQueue
+from bottle import route, get
 from startup_utils import initializeDB
 from threading import Thread
-import json
 from date_formatting_utils import nowInSeconds, prettyPrintTime
-from time import sleep
 from response_handler import ResponseHandler
+
 STATIC_ROOT = os.path.join(os.path.dirname(__file__), 'static')
 
 responseHandler = None
@@ -25,33 +24,29 @@ message queue processing thread logic
 '''
 
 def getMessages(messageQueue, fibDataDB, workerId):
-    keepGoing = True
     
-    while(keepGoing == True):
-        nextMessageArray = messageQueue.getMessages(queue_name,1)
-        if len(nextMessageArray) != 0:
-            
+        ''' 
+        the processMessage method encapsulates bookkeeping in the database and keeps it separate from
+        message queue logic. Not sure if we can do this in other languages...
+        '''
+    
+        def processMessage(message):
             dataMap = {}
             dataMap['worker_id'] = workerId
-            dataMap['fib_id'] = nextMessageArray[0].messageKey
+            dataMap['fib_id'] = message.messageKey
             dataMap['fib_value'] = -1
             dataMap['started_date'] =  nowInSeconds()
             
             request = FibDataRequest(body=dataMap)
             log.debug("worker %s starting Fibonnaci on %d at %s"%(workerId,request.fibId,prettyPrintTime(request.startedDate)) )
             addedRequest = fibDataDB.addRequest(request)
-            fibValue = F(nextMessageArray[0].messageKey)
+            fibValue = F(message.messageKey)
             addedRequest.fibValue = fibValue
             addedRequest.finishedDate = nowInSeconds()
             fibDataDB.updateRequest(addedRequest)
             log.debug("worker %s finished Fibonnaci on %d, calculated value = %d,  at %s"%(workerId,request.fibId,request.fibValue,prettyPrintTime(request.startedDate)) )
-        else:
-            log.debug('about to sleep %d seconds'%rest_interval)
-            sleep(rest_interval)
     
-
-
-         
+        messageQueue.getAndProcessMessages(queueName,processMessage)
 
 '''
 view routes
@@ -128,14 +123,14 @@ fibDataDB = initializeDB(mysql_url)
 
 log.debug("setting up message queue")
 
-rabbit_url = os.environ['RABBITMQ_URL']
-queue_name = os.environ['QUEUE_NAME']
-rest_interval  = int(os.getenv('REST_INTERVAL',5))
+rabbitUrl = os.environ['RABBITMQ_URL']
+queueName = os.environ['QUEUE_NAME']
+restInterval  = int(os.getenv('REST_INTERVAL',5))
 log.debug("rabbit mq url:%s"%os.environ['RABBITMQ_URL'])
 
-messageQueue = MessageQueue(rabbit_url)
+messageQueue = MessageQueue(rabbitUrl)
 
-messageQueue.createQueue(queue_name)
+messageQueue.createQueue(queueName)
 
 log.debug("generating worker ID")
 
@@ -143,7 +138,7 @@ workerId = uuid.uuid1()
 
 # need to receive messages async so that the process can also handle web requests.
 
-t = Thread(name='daemon', target=getMessages, args = (messageQueue,fibDataDB,workerId,))
+t = Thread(name='daemon', target=getMessages, args = (messageQueue,fibDataDB,workerId))
 t.setDaemon(True)
 t.start()
 

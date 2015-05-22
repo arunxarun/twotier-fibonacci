@@ -4,12 +4,10 @@ import os
 import bottle
 import logging
 import urlparse
-import uuid
-import pika
-from fib_data import  FibDataDB, DataEncoder, FibDataRequest,FormattedRequest
-from date_formatting_utils import nowInSeconds
+from fib_data import  DataEncoder, FormattedRequest
+
 from bottle import route, get, post, request, template
-from messages import Message, MessageQueue
+from messages import Message
 from startup_utils import initializeDB
 import json
 from messages import MessageQueue
@@ -64,9 +62,7 @@ def fib():
     if not number:
         return template('Please add a number to the end of url: /send/5')
     
-    messageQueue.sendMessage(queue_name, Message(value = int(number)))
-    
-    
+    messageQueue.sendMessage(queueName, Message(value = int(number)))
     
 
 '''
@@ -78,7 +74,7 @@ def fib_num(number):
     if not number:
         return template('Please add a number to the end of url: /fib/5')
     
-    messageQueue.sendMessage(queue_name, Message(value = int(number)))
+    messageQueue.sendMessage(queueName, Message(value = int(number)))
 
 '''
 required to serve static resources
@@ -100,13 +96,13 @@ except KeyError:
 fibDataDB = initializeDB(mysql_url)
 
 log.debug("setting up message queue")
-rabbit_url = os.environ['RABBITMQ_URL']
-queue_name = os.environ['QUEUE_NAME']
+rabbitUrl = os.environ['RABBITMQ_URL']
+queueName = os.environ['QUEUE_NAME']
 
 log.debug("rabbit mq url:%s"%os.environ['RABBITMQ_URL'])
 
-messageQueue = MessageQueue(rabbit_url)
-messageQueue.createQueue(queue_name)
+messageQueue = MessageQueue(rabbitUrl)
+messageQueue.createQueue(queueName)
 
 
 '''

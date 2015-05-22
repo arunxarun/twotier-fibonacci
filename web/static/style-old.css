@@ -1,19 +1,12 @@
 /* style.css */
 
-/*html { 
-  background: url(space-background.jpg) no-repeat center center fixed; 
-  -webkit-background-size: cover;
-  -moz-background-size: cover;
-  -o-background-size: cover;
-  background-size: cover;
-}*/
-
 body {
     font-family: helvetica, arial, sans-serif;
     font-size: 11pt;
     line-height: 120%;
     margin: 10;
     padding: 0;
+    background-color: #BDBDBD;
 }
 
 input {
@@ -38,11 +31,13 @@ h1 {
     font-weight: normal;
     text-align: left;
     font-size: 45px;
+    color: #ffffff;
     background-repeat: no-repeat;
     background-position: top left;
 }
 
 .container {
+    background-color: #99CCFF;
     text-align: left;
     padding: 10%;
     border-bottom: solid 4px #243040;
@@ -50,12 +45,13 @@ h1 {
     height = 50%;
     margin = 10;
     border: solid 1px #243040;
-    border-radius: 10px;
+    border-radius: 25px;
     box-shadow: 10px 10px 5px #888888;
     
 }
 
 .sub-container {
+	background-color: #99CCFF;
     text-align: center;
     padding: 2%;
     margin-top: 20px;
