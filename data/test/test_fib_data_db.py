@@ -43,10 +43,9 @@ class Test(unittest.TestCase):
             
             db.close()
         except MySQLdb.Error, e:
-            self.log.error("error creating table fibdata")
-            self.log.error(e)
-            self.handleMySQLException(e,True)
-            return None        
+            print ("error creating table fibdata")
+            print(e)
+                    
         
     def test1InitializeFibData(self):
         

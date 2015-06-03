@@ -13,7 +13,7 @@ import json
 from messages import MessageQueue
 
 STATIC_ROOT = os.path.join(os.path.dirname(__file__), 'static')
-
+PAGE_ROOT = os.path.dirname(__file__)
 logging.basicConfig()
 log = logging.getLogger('receiver')
 log.setLevel(logging.DEBUG)
@@ -29,8 +29,10 @@ view routes
 
 @route('/')
 def home():
-    bottle.TEMPLATE_PATH.insert(0, './views')
-    return bottle.template('home')
+#     bottle.TEMPLATE_PATH.insert(0, './views')
+#     return bottle.template('home')
+    return bottle.static_file('index.html', root=PAGE_ROOT)
+
     
 @get('/received') 
 def getReceived():

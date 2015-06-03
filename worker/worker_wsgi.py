@@ -48,14 +48,10 @@ def getMessages(messageQueue, fibDataDB, workerId):
     
         messageQueue.getAndProcessMessages(queueName,processMessage)
 
-'''
-view routes
-'''
-
 @route('/')
+@route("/index.html")
 def home():
-    bottle.TEMPLATE_PATH.insert(0, './views')
-    return bottle.template('home')
+    return bottle.static_file('index.html', root=os.path.dirname(__file__))
     
 @get('/inprocess') 
 def getInProcess():
