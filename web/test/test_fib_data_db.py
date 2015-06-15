@@ -8,7 +8,7 @@ import urlparse
 import os
 import MySQLdb
 from fib_data import FibDataRequest, FibDataDB, DisplayData,DataEncoder
-from test_dbutils import initializeFibDataDB
+from test_web_dbutils import initializeFibDataDB
 from date_formatting_utils import nowInSeconds
 import sys
 import datetime
@@ -52,11 +52,10 @@ class Test(unittest.TestCase):
        
         try:
             fibDataDB = initializeFibDataDB(self.testName)
-            fibData = FibDataRequest(None,{"worker_id":"abcd","fib_id":3, "fib_value":2})
+            fibData = FibDataRequest(None,{"fib_id":3, "fib_value":2})
             newFD = fibDataDB.addRequest(fibData)
         
             self.assertTrue(newFD.requestId != -1)
-            self.assertTrue(newFD.workerId == fibData.workerId)
             self.assertTrue(newFD.fibId == fibData.fibId)
             self.assertTrue(newFD.fibValue == fibData.fibValue)
             self.assertTrue(newFD.startedDate == fibData.startedDate)
@@ -72,7 +71,7 @@ class Test(unittest.TestCase):
             fibDataDB = initializeFibDataDB(self.testName)
             startedDate =  nowInSeconds()
             
-            fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
+            fd = FibDataRequest(None, {"fib_id":3,"fib_value":3,"started_date": startedDate})
             
             newFd = fibDataDB.addRequest(fd)
             
@@ -91,7 +90,7 @@ class Test(unittest.TestCase):
         try:
             fibDataDB = initializeFibDataDB(self.testName)
             startedDate = nowInSeconds()
-            fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
+            fd = FibDataRequest(None, {"fib_id":3,"fib_value":3,"started_date": startedDate})
             
             newFd = fibDataDB.addRequest(fd)
             fdArr = fibDataDB.getRequests(isPending = True)
@@ -100,13 +99,11 @@ class Test(unittest.TestCase):
             
             self.assertTrue(len(fdArr) == 1)
             testFd = fdArr[0]
-            self.assertTrue(testFd.workerId == newFd.workerId)
             self.assertTrue(testFd.fibId == newFd.fibId)
             
             fdArr2 = fibDataDB.getRequests(isPending = True,isDescending=False)
             self.assertTrue(len(fdArr2) == 1)
             testFd2 = fdArr2[0]
-            self.assertTrue(testFd2.workerId == newFd.workerId)
             self.assertTrue(testFd2.fibId == newFd.fibId)
             
             fdArr3 = fibDataDB.getRequests()
@@ -128,14 +125,12 @@ class Test(unittest.TestCase):
     def test5InitializeFromJSON(self):
         try:
             dataMap = {}
-            dataMap['worker_id'] = 2
             dataMap['fib_id'] = 3
             dataMap['fib_value'] = 3
             dataMap['started_date'] =  nowInSeconds()
             request = FibDataRequest(body = dataMap)
             
             self.assertTrue(request != None)
-            self.assertTrue(request.workerId == dataMap['worker_id'])
             self.assertTrue(request.fibId == dataMap['fib_id'])
             self.assertTrue(request.fibValue == dataMap['fib_value'])
             
@@ -148,11 +143,10 @@ class Test(unittest.TestCase):
     def test6AddRequestWithFinishedDate(self):
         try:
             fibDataDB = initializeFibDataDB(self.testName)
-            fibData = FibDataRequest(None,{"worker_id":"abcd","fib_id":3, "fib_value":2, "started_date" :nowInSeconds(), "finished_date" : nowInSeconds()})
+            fibData = FibDataRequest(None,{"fib_id":3, "fib_value":2, "started_date" :nowInSeconds(), "finished_date" : nowInSeconds()})
             newFD = fibDataDB.addRequest(fibData)
         
             self.assertTrue(newFD.requestId != -1)
-            self.assertTrue(newFD.workerId == fibData.workerId)
             self.assertTrue(newFD.fibId == fibData.fibId)
             self.assertTrue(newFD.fibValue == fibData.fibValue)
             self.assertTrue(newFD.startedDate == fibData.startedDate)
@@ -162,145 +156,13 @@ class Test(unittest.TestCase):
             print e
             self.fail(e)
         
-    def test7GetRequestsByWorker(self): 
-        try:
-            fibDataDB = initializeFibDataDB(self.testName)
-            startedDate = nowInSeconds()
-            fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
-            
-            newFd = fibDataDB.addRequest(fd)
-            fdArr = fibDataDB.getRequests(worker="abcd", isPending = True)
-            
-            self.assertTrue(len(fdArr) == 1)
-            testFd = fdArr[0]
-            self.assertTrue(testFd.workerId == newFd.workerId)
-            self.assertTrue(testFd.fibId == newFd.fibId)
-            
-            fdArr2 = fibDataDB.getRequests(worker="abcd",isPending = True,isDescending=False)
-            self.assertTrue(len(fdArr2) == 1)
-            testFd2 = fdArr2[0]
-            self.assertTrue(testFd2.workerId == newFd.workerId)
-            self.assertTrue(testFd2.fibId == newFd.fibId)
-            
-            fdArr3 = fibDataDB.getRequests(worker="abcd")
-            self.assertTrue(len(fdArr3) == 0)
-            
-            
-            
-        except:
-            e = sys.exc_info()[0]
-            print e
-            self.fail(e) 
-            
-    def test8Add_UpdateRequest_FetchWorker_FetchPending(self):
-        
-        try:
-            fibDataDB = initializeFibDataDB(self.testName)
-            startedDate = nowInSeconds()
-            fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
-            
-            newFd = fibDataDB.addRequest(fd)
-            fdArr = fibDataDB.getRequests(worker="abcd")
-            
-            self.assertTrue(len(fdArr) == 0)
-            
-            
-            fd2Arr = fibDataDB.getRequests(isPending = True) # no worker, pending
-            self.assertTrue(len(fd2Arr) == 1)
-            test2Fd = fd2Arr[0]
-
-            self.assertTrue(test2Fd.requestId == newFd.requestId)
-            fibDataDB.updateRequest(test2Fd)
-            
-            fd3Arr = fibDataDB.getRequests(isPending = True) # no worker, pending
-                        
-            self.assertTrue(len(fd3Arr) == 0)
-        except:
-            e = sys.exc_info()[0]
-            print e
-            self.fail(e) 
-            
-    
-    def test9Add_UpdateRequest_FetchWorker_FetchWorkerPending(self):
-        try:
-            fibDataDB = initializeFibDataDB(self.testName)
-            startedDate = nowInSeconds()
-            fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
-            
-            newFd = fibDataDB.addRequest(fd)
-            fdArr = fibDataDB.getRequests(worker="abcd")
-            
-            self.assertTrue(len(fdArr) == 0)
-            
-            fd2Arr = fibDataDB.getRequests(worker = "abcd", isPending = True) # no worker, pending
-            self.assertTrue(len(fd2Arr) == 1)
-            test2Fd = fd2Arr[0]
-            self.assertTrue(test2Fd.requestId == newFd.requestId)
-            
-            fibDataDB.updateRequest(test2Fd)
-            fd3Arr = fibDataDB.getRequests(worker = "abcd", isPending = True) # no worker, pending
-            self.assertTrue(len(fd3Arr) == 0)
-            
-        except:
-            e = sys.exc_info()[0]
-            print e
-            self.fail(e) 
-        
-    def test10Add_UpdateRequest_FetchWorker_FetchPendingNotDescending(self):
-        
-        try:
-            fibDataDB = initializeFibDataDB(self.testName)
-            startedDate = nowInSeconds()
-            fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
-            
-            newFd = fibDataDB.addRequest(fd)
-            fdArr = fibDataDB.getRequests(worker="abcd", isPending = True)
-            
-            self.assertTrue(len(fdArr) == 1)
-            testFd = fdArr[0]
-                    
-            
-            fd2Arr = fibDataDB.getRequests(isPending = True,isDescending= False) # no worker, pending
-            test2Fd = fd2Arr[0]
-            
-        except:
-            e = sys.exc_info()[0]
-            print e
-            self.fail(e) 
-            
-    
-    def test11Add_UpdateRequest_FetchWorker_FetchWorkerPendingNoDescending(self):
-        try:
-            fibDataDB = initializeFibDataDB(self.testName)
-            startedDate = nowInSeconds()
-            fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
-            
-            fibDataDB.addRequest(fd)
-            fdArr = fibDataDB.getRequests(worker="abcd")
-            
-            self.assertTrue(len(fdArr) == 0)
-            
-            
-            
-            fd2Arr = fibDataDB.getRequests(worker = "abcd", isPending = True,isDescending = False) #  worker, pending, not descending
-            self.assertTrue(len(fd2Arr) == 1)
-            test2Fd = fd2Arr[0]
-            
-            fibDataDB.updateRequest(test2Fd)
-            fd3Arr = fibDataDB.getRequests(worker = "abcd", isPending = True,isDescending = False) #  worker, pending, not descending
-            self.assertTrue(len(fd3Arr) == 0)
-            
-        except:
-            e = sys.exc_info()[0]
-            print e
-            self.fail(e) 
-            
+                
     def test12Add_UpdateRequest_FetchAllCompleteTasks(self):
         
         fibDataDB = initializeFibDataDB(self.testName)
         finishedDate = nowInSeconds()
         startedDate = finishedDate - 5;
-        fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate,"finished_date":finishedDate})
+        fd = FibDataRequest(None, {"fib_id":3,"fib_value":3,"started_date": startedDate,"finished_date":finishedDate})
         
         fibDataDB.addRequest(fd)
         fdArr = fibDataDB.getRequests(isPending = False)
@@ -309,7 +171,7 @@ class Test(unittest.TestCase):
         
         startedDate = nowInSeconds()
         
-        fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
+        fd = FibDataRequest(None, {"fib_id":3,"fib_value":3,"started_date": startedDate})
                 
         fibDataDB.addRequest(fd)
         fdArr = fibDataDB.getRequests(isPending = False)
@@ -320,12 +182,12 @@ class Test(unittest.TestCase):
         try:
             fibDataDB = initializeFibDataDB(self.testName)
             startedDate = nowInSeconds()
-            fd = FibDataRequest(None, {"worker_id":"abcd","fib_id":3,"fib_value":3,"started_date": startedDate})
-            fd2 = FibDataRequest(None,{"worker_id":"abcd","fib_id":4,"fib_value":5,"started_date": startedDate})
+            fd = FibDataRequest(None, {"fib_id":3,"fib_value":3,"started_date": startedDate})
+            fd2 = FibDataRequest(None,{"fib_id":4,"fib_value":5,"started_date": startedDate})
             fibDataDB.addRequest(fd)
             fibDataDB.addRequest(fd2)
             
-            fdArr = fibDataDB.getRequests(worker="abcd", isPending = True)
+            fdArr = fibDataDB.getRequests(isPending = True)
             
             self.assertTrue(len(fdArr) == 2)
             

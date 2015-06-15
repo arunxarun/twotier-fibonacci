@@ -20,14 +20,14 @@ $(document).ready(function() {
 			inProcessTable.rows().remove();
 			$.each(obj, function() {
 				val = 0;
-				if (this['fibData']['fibValue'] == -1){
+				if (this['workerData']['fibValue'] == -1){
 					val = 'in progress';
 				}
 				else {
 					
-					val = this['fibData']['fibValue'];
+					val = this['workerData']['fibValue'];
 				}
-				inProcessTable.row.add([this['fibData']['fibId'],val,this['formattedStartDate'],this['runTime']]).draw();
+				inProcessTable.row.add([this['workerData']['workerId'],this['workerData']['fibId'],val,this['formattedStartDate'],this['runTime']]).draw();
 			});
 						
 		});
@@ -40,7 +40,7 @@ $(document).ready(function() {
 			completeTable.rows().remove();
 			$.each(obj, function() {
 				
-				completeTable.row.add([this['fibData']['fibId'],this['fibData']['fibValue'],this['fibData']['workerId'],this['formattedStartDate'],this['formattedFinishDate']]).draw();
+				completeTable.row.add([this['workerData']['workerId'],this['workerData']['fibId'],this['workerData']['fibValue'],this['workerData']['workerId'],this['formattedStartDate'],this['formattedFinishDate']]).draw();
 			});
 						
 		});

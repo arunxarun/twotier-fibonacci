@@ -9,7 +9,7 @@ import MySQLdb
 import urlparse
 from worker_data import WorkerData, WorkerDataDB
 from date_formatting_utils import nowInSeconds
-from test_dbutils import initializeWorkerDataDB
+from test_worker_dbutils import initializeWorkerDataDB
 
 class Test(unittest.TestCase):
 
@@ -46,10 +46,10 @@ class Test(unittest.TestCase):
             self.handleMySQLException(e,True)
             return None       
 
-    def test1AddWorkerStatus(self):
+    def test1AddWorkerDataAtStart(self):
         
         workerDataDB = initializeWorkerDataDB(self.testName)
-        workerData = WorkerData(None, {"worker_id":"abcd","worker_status":"working", "last_checkin_date":nowInSeconds()})
+        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3})
         
         newWorkerData = workerDataDB.addWorkerData(workerData)
         
@@ -60,46 +60,84 @@ class Test(unittest.TestCase):
     def test2GetWorkerData(self):
         
         workerDataDB = initializeWorkerDataDB(self.testName)
-        workerData = WorkerData(None, {"worker_id":"abcd","worker_status":"working", "last_checkin_date":nowInSeconds()})
+        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3})
         
         newWorkerData = workerDataDB.addWorkerData(workerData)
         
         checkWorkerData = workerDataDB.getWorkerData(newWorkerData.workerId)
         
         self.assertTrue(checkWorkerData.workerId == workerData.workerId)
-        self.assertTrue(checkWorkerData.lastCheckinDate == workerData.lastCheckinDate)
+        self.assertTrue(checkWorkerData.fibId == workerData.fibId)
 
     def testUpdateWorkerData(self):
         
         workerDataDB = initializeWorkerDataDB(self.testName)
         lastCheckinDate = nowInSeconds()
         lastCheckinDate = lastCheckinDate-5
-        workerData = WorkerData(None, {"worker_id":"abcd","worker_status":"working", "last_checkin_date":lastCheckinDate})
+        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3,"started_date":nowInSeconds()-5})
         
         newWorkerData = workerDataDB.addWorkerData(workerData)
         
-        workerData.lastCheckinDate = nowInSeconds()
+        workerData.fibValue=3
         workerDataDB.updateWorkerData(workerData)
         
         checkWorkerData = workerDataDB.getWorkerData(workerData.workerId)
         
-        self.assertTrue(lastCheckinDate < checkWorkerData.lastCheckinDate)
+        self.assertTrue(checkWorkerData.finishedDate != None)
     
-    def testGetWorkerDatas(self):
+    def testGetPendingWorkItems(self):
         
         workerDataDB = initializeWorkerDataDB(self.testName)
-        workerData = WorkerData(None, {"worker_id":"abcd","worker_status":"working", "last_checkin_date":nowInSeconds()-5})
+        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3})
         workerDataDB.addWorkerData(workerData)
     
-        workerData = WorkerData(None, {"worker_id":"efgh","worker_status":"working", "last_checkin_date":nowInSeconds()-4})
+        workerData = WorkerData(None, {"request_id":2,"worker_id":"efgh","fib_id":5})
         workerDataDB.addWorkerData(workerData)
         
         timestamp = nowInSeconds()
-        workerDatas = workerDataDB.getWorkerDatas(None, 5)
+        workerDatas = workerDataDB.getWorkItems(isPending = True)
         
         for workerData in workerDatas:
-            self.assertTrue(timestamp - workerData.lastCheckinDate < 5)
+            self.assertTrue(workerData.fibValue == -1)
+            self.assertTrue(workerData.finishedDate == None)
+
+        workerDatas = workerDataDB.getWorkItems(isPending = False)
+        
+        self.assertTrue(len(workerDatas) == 0)
     
+    def testGetCompletedWorkItems(self):
+        
+        workerDataDB = initializeWorkerDataDB(self.testName)
+        startDate = nowInSeconds()- 5;
+        
+        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3,"startedDate":startDate})
+        workerDataDB.addWorkerData(workerData)
+        workerData.fibValue = 3
+        workerDataDB.updateWorkerData(workerData)
+        workerData = WorkerData(None, {"request_id":2,"worker_id":"efgh","fib_id":5,"startedDate":startDate})
+        
+        workerDataDB.addWorkerData(workerData)
+        workerData.fibValue = 8
+        workerDataDB.updateWorkerData(workerData)
+        
+        
+        workerDatas = workerDataDB.getWorkItems(isPending = True)
+        
+        self.assertTrue(len(workerDatas) == 0)
+        
+        
+        workerDatas = workerDataDB.getWorkItems(isPending = False)
+        for workerData in workerDatas:
+            self.assertTrue(workerData.fibValue != -1)
+            self.assertTrue(workerData.finishedDate != None)
+
+        workerDatas = workerDataDB.getWorkItems(isPending = True)
+        
+        self.assertTrue(len(workerDatas) == 0)
+
+        
+
+
     def tearDown(self):
         try:
             MYSQL_URL = "mysql://dev:devpass@localhost/test"

@@ -11,6 +11,7 @@ import datetime
 import urlparse
 import os
 import sys
+from date_formatting_utils import nowInSeconds
 
 logging.basicConfig()
 
@@ -23,33 +24,91 @@ class MessageEncoder(json.JSONEncoder):
     def default(self,o):
         return o.__dict__
 
-class Message(object):
+
+class WorkRequestMessage(object):
     '''
-    contains message_key, created_date
+    contains request id, message_key, created_date
+    
     '''
 
 
-    def __init__(self, value = None, body = None):
+    def __init__(self, requestId = None, messageKey = None, body = None):
                 
         messageLogger.debug("initializing from JSON")
         
         if body != None:
+            if body.has_key('requestId') == True:
+                self.requestId = body['requestId']
+            else:
+                messageLogger.error("invalid JSON format, requestId not found")
+                raise 'invalid format'
+            
             if body.has_key('messageKey') == True:
                 self.messageKey = body['messageKey']
             else:
-                messageLogger.error("invalid JSON format, sequence_id not found")
+                messageLogger.error("invalid JSON format, messageKey not found")
                 raise 'invalid format'
             
-            # created is optional. It's always overwritten on insert to db.
-            if body.has_key('createdDate'):
-                self.createdDate = body['createdDate']
-        elif value != None:
-            self.messageKey = int(value)
-            self.createdDate = int(datetime.datetime.now().strftime("%s"))
+            # created is optional.
+            if body.has_key('startedDate'):
+                self.starteDate = body['startedDate']
+            else: 
+                self.startedDate = nowInSeconds()
+        else:
+            self.requestId = requestId
+            self.messageKey = messageKey
+            self.createdDate = nowInSeconds()
             
     
+
+            
+class WorkResultMessage(object):
+    '''
+    contains request id, message key, message value, created date
+    '''
     
-    
+    def __init__(self, requestId = None, messageKey = None, messageValue = None, startedDate = None, finishedDate = None, body = None):
+                
+        messageLogger.debug("initializing from JSON")
+        
+        if body != None:
+            if body.has_key('requestId') == True:
+                self.requestId = body['requestId']
+            else:
+                messageLogger.error("invalid JSON format, requestId not found")
+                raise 'invalid format'
+            
+            if body.has_key('messageKey') == True:
+                self.messageKey = body['messageKey']
+            else:
+                messageLogger.error("invalid JSON format, messageKey not found")
+                raise 'invalid format'
+            
+            if body.has_key('messageValue') == True:
+                self.messageValue = body['messageValue']
+            else:
+                messageLogger.error("invalid JSON format, messageValue not found")
+                raise 'invalid format'
+            
+            if body.has_key('startedDate'):
+                self.startedDate = body['startedDate']
+                
+            if body.has_key('finishedDate'):
+                self.finishedDate = body['finishedDate']
+        else:
+            self.requestId = requestId
+            self.messageKey = messageKey
+            self.messageValue = messageValue
+            self.startedDate = startedDate
+            
+            if finishedDate == None:
+                self.finishedDate = int(datetime.datetime.now().strftime("%s"))
+            else:
+                self.finishedDate = finishedDate
+
+
+
+
   
             
 class MessageQueue:
@@ -59,6 +118,7 @@ class MessageQueue:
         self.amqp_url = amqp_url
         self.channel = None
         self.keepGoing = True
+        self.queueName = None
     
      
     def stopProcessing(self):
@@ -68,19 +128,21 @@ class MessageQueue:
         self.log.debug("creating queue %s"%queueName)
         parameters = pika.URLParameters(self.amqp_url)
         connection = pika.BlockingConnection(parameters)
-        channel = connection.channel() 
-        channel.queue_declare(queue=queueName)
+        self.channel = connection.channel() 
+        self.queueName = queueName
+        self.channel.queue_declare(queue=self.queueName)
         connection.close()
         
-    def deleteQueue(self,queueName):
-        self.log.debug("deleting queue %s"%queueName)
+        
+    def deleteQueue(self):
+        self.log.debug("deleting queue %s"%self.queueName)
         parameters = pika.URLParameters(self.amqp_url)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel() 
-        channel.queue_delete(queue=queueName)
+        channel.queue_delete(queue=self.queueName)
         connection.close()
         
-    def getMessages(self, queueName,messageCount):
+    def getMessages(self, messageCount):
         
         """
         pulls messages from the queue, for a specified count of messages
@@ -95,7 +157,7 @@ class MessageQueue:
         
         for i in range(0,messageCount):
             
-            method_frame, header_frame, body = channel.basic_get(queueName)
+            method_frame, header_frame, body = channel.basic_get(self.queueName)
             if method_frame:
                 try:
                     self.log.debug("message %d, method frame = %s, header frame = %s"%(i,method_frame,header_frame))
@@ -110,7 +172,7 @@ class MessageQueue:
         self.log.debug("returning %d messages found"%len(messages))    
         return messages
     
-    def getAndProcessMessages(self,queueName,processMessage,quitOnEmpty = False):
+    def getAndProcessMessages(self,processMessage,extractMessage,quitOnEmpty = False):
         """
         pulls messages from the queue, for a specified count of messages
         """
@@ -120,11 +182,11 @@ class MessageQueue:
         channel = connection.channel()
         
         while self.keepGoing == True:
-            method_frame, header_frame, body = channel.basic_get(queueName)
+            method_frame, header_frame, body = channel.basic_get(self.queueName)
             if method_frame:
                 try:
                     self.log.debug("method frame = %s, header frame = %s"%(method_frame,header_frame))
-                    processMessage(self.extractMessage(body))
+                    processMessage(extractMessage(body))
                     channel.basic_ack(delivery_tag=method_frame.delivery_tag) 
                 except:
                     self.log.error ("invalid format of message: method frame = %s, header frame = %s, removing message from queue")
@@ -132,30 +194,19 @@ class MessageQueue:
                     break
             
                 
-    def extractMessage(self,messageBody):
-        """
-        puts the message in a Message classs
-        """
-        messageContents = json.loads(messageBody)
-        try:
-            
-            message = Message(body=messageContents)
-            return message
-        except:
-            
-            self.log.error(str(sys.exc_info()[0]))
+   
         
         
         
-    def sendMessage(self, queueName, message):
+    def sendMessage(self,  message):
         parameters = pika.URLParameters(self.amqp_url)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel() 
         
     
         json_body = json.dumps(message,cls=MessageEncoder)
-         
-        channel.basic_publish(exchange='', routing_key=queueName, body=json_body)
+        self.log.debug(json_body) 
+        channel.basic_publish(exchange='', routing_key=self.queueName, body=json_body)
         connection.close()
                     
    

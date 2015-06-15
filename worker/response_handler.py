@@ -5,43 +5,41 @@ Created on May 13, 2015
 '''
 import logging
 import json
-from fib_data import FibDataDB, FibDataRequest, DisplayData,DataEncoder
+from worker_data import WorkerDataDB, WorkerData, WorkerDisplayData,WorkerDataEncoder
 
 logging.basicConfig()
 
 
 class ResponseHandler:
     
-    def __init__(self,uuid, fibDataDB):
+    def __init__(self,uuid, workerDataDB):
         self.uuid = uuid
-        self.fibDataDB = fibDataDB
+        self.workerDataDB = workerDataDB
         self.log = logging.getLogger('worker')
         self.log.setLevel(logging.DEBUG)
  
     
-        
-    
     def getInProcess(self):
         self.log.debug("handling /inprocess GET")
     
-        allRequestData = self.fibDataDB.getRequests(isPending=True)
+        allData = self.workerDataDB.getWorkItems(isPending=True)
         
         workerInfo = []
-        for request in allRequestData:
-            workerInfo.append(DisplayData(request))
+        for workerData in allData:
+            workerInfo.append(WorkerDisplayData(workerData))
             
             
-        return json.dumps(workerInfo,cls=DataEncoder)
+        return json.dumps(workerInfo,cls=WorkerDataEncoder)
     
     def getComplete(self):
         self.log.debug("handling /complete GET")
     
-        completeData = self.fibDataDB.getRequests(isPending=False)
+        allData = self.workerDataDB.getWorkItems(isPending=False)
         workerInfo = []
-        for request in completeData:
-            workerInfo.append(DisplayData(request))
+        for workerData in allData:
+            workerInfo.append(WorkerDisplayData(workerData))
             
-        return json.dumps(workerInfo,cls=DataEncoder)
+        return json.dumps(workerInfo,cls=WorkerDataEncoder)
 
     def getInstance(self):
         return "{'instance-id':'%s'}"%self.uuid

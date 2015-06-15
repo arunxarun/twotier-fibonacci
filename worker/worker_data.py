@@ -19,6 +19,12 @@ class DataEncoder(json.JSONEncoder):
 workerDataLogger = logging.getLogger('workerdata')
 workerDataLogger.setLevel(logging.DEBUG)
 
+class WorkerDataEncoder(json.JSONEncoder):
+        
+    def default(self,o):
+        return o.__dict__
+    
+
 class WorkerData(object):
     '''
     a row in the DisplayData table, indicating worker ID, status, and last checkin time
@@ -26,17 +32,31 @@ class WorkerData(object):
 
 
     def __init__(self, row = None, body = None):
-
+        # SELECT id,request_id, worker_id,fib_id,fib_value, started_date,finished_date
         if row != None:
             workerDataLogger.debug("initializing from database")
             self.id = row[0]
-            self.workerId = row[1]
-            self.workerStatus = row[2]
-            self.lastCheckinDate = row[3]
+            self.requestId = row[1]
+            self.workerId = row[2]
+            self.fibId = row[3]
+            self.fibValue = row[4]
+            self.startedDate = row[5]
+        
+            if len(row) == 7:
+                self.finishedDate = row[6]
+            else:
+                self.finishedDate = None
             
         elif body != None:
             workerDataLogger.debug("initializing from JSON")
             self.id = -1
+            
+            if body.has_key('request_id') == True:
+                self.requestId = body['request_id']
+            else:
+                workerDataLogger.error("invalid JSON format, request_id not found")
+                raise 'invalid format'
+            
             
             if body.has_key('worker_id') == True:
                 self.workerId = body['worker_id']
@@ -44,17 +64,37 @@ class WorkerData(object):
                 workerDataLogger.error("invalid JSON format, worker_id not found")
                 raise 'invalid format'
             
-            if body.has_key('worker_status') == True:
-                self.workerStatus = body['worker_status']
+            if body.has_key('fib_id') == True:
+                self.fibId = body['fib_id']
             else:
-                workerDataLogger.error("invalid JSON format, worker_status not found")
+                workerDataLogger.error("invalid JSON format, fib_id not found")
                 raise 'invalid format'
             
-            if body.has_key('last_checkin_date'):
-                self.lastCheckinDate = body['last_checkin_date']
+            if body.has_key('fib_data'):
+                self.fibData = body['fib_data']
             else:
-                self.lastCheckinDate = None
-    
+                self.fibData = -1
+            
+            if body.has_key("started_date"):
+                self.startedDate = body['started_date']
+            else:
+                self.startedDate = nowInSeconds()
+            
+            if body.has_key("finished_date"):
+                self.finishedDate = body['finished_date']
+            else:
+                self.finishedDate = None
+                
+  
+class WorkerDisplayData(object):
+    def __init__(self, workerData):
+        self.workerData = workerData
+        self.formattedStartDate = prettyPrintTime(workerData.startedDate)
+        if workerData.finishedDate != None:
+            self.formattedFinishDate = prettyPrintTime(workerData.finishedDate)
+        else:
+            self.runTime = nowInSeconds() - workerData.startedDate
+          
 class WorkerDataDB(object):
     
     def __init__(self,url,dbName,userName,password):
@@ -85,7 +125,7 @@ class WorkerDataDB(object):
         
         try:
             db = self.connectToDB()
-            workerDataTableCreate = 'CREATE TABLE IF NOT EXISTS workerdata( id int not null auto_increment, worker_id char(100) not null, worker_status char(100) not null, last_checkin_date int not null,PRIMARY KEY(id));'
+            workerDataTableCreate = 'CREATE TABLE IF NOT EXISTS workerdata( id int not null auto_increment, request_id int, worker_id char(100) not null, fib_id int not null, fib_value int DEFAULT -1, started_date int not null, finished_date int, PRIMARY KEY(id));'
             
             cur = db.cursor()
     
@@ -165,15 +205,15 @@ class WorkerDataDB(object):
             cur = db.cursor()
             
             
-            self.log.debug("adding worker entry into database with worker_id = '%s', worker_status = %s, and last_checkin_date = %d"%(workerData.workerId,workerData.workerStatus,workerData.lastCheckinDate))
-            query = "insert into workerdata(worker_id, worker_status,last_checkin_date) values('%s','%s', %d)"%(workerData.workerId,workerData.workerStatus,workerData.lastCheckinDate)
+            self.log.debug("adding worker entry into database with request_id %d, worker_id = '%s', fib_id=%d, startedDate = %s"%(workerData.requestId,workerData.workerId,workerData.fibId,nowInSeconds()))
+            query = "insert into workerdata(request_id, worker_id, fib_id,started_date) values(%d,'%s',%d,%d)"%(workerData.requestId,workerData.workerId,workerData.fibId,nowInSeconds())
             
             cur.execute(query)
             db.commit()
             
-            # get generated ID
+            # get generated ID - THIS IS VALID PER CONNECTION
             
-            query = "select max(id) from workerdata where worker_id = '%s'"%(workerData.workerId)
+            query = "SELECT LAST_INSERT_ID()";
             cur.execute(query)
             
             row = cur.fetchone()
@@ -195,7 +235,7 @@ class WorkerDataDB(object):
         try:
             
             db = self.connectToDB()
-            query = "select id,worker_id,worker_status,last_checkin_date from workerdata where worker_id = '%s'"%workerId
+            query = "select id,request_id, worker_id,fib_id,fib_value,started_date,finished_date from workerdata where worker_id = '%s'"%workerId
             
             cur = db.cursor()
             cur.execute(query)
@@ -224,8 +264,8 @@ class WorkerDataDB(object):
             db = self.connectToDB()
             cur = db.cursor()
             
-            self.log.debug("update workerData set worker_id = '%s', worker_status='%s',last_checkin_date=%d where id = %d"%(workerData.workerId,workerData.workerStatus,workerData.lastCheckinDate, workerData.id))
-            query = "update workerData set worker_id = '%s', worker_status='%s',last_checkin_date=%d where id = %d"%(workerData.workerId,workerData.workerStatus,workerData.lastCheckinDate, workerData.id)
+            self.log.debug("update workerData set fib_value = %d, finished_date = %d where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.id))
+            query = "update workerData set fib_value = %d, finished_date = %d where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.id)
             cur.execute(query)
             db.commit()
             self.disconnectFromDB(db)
@@ -236,7 +276,7 @@ class WorkerDataDB(object):
             self.handleMySQLException(e)
     
     
-    def getWorkerDatas(self,workerId = None, withinSeconds = -1, isDescending=True,limit = 100):
+    def getWorkItems(self, isPending = False, isDescending=True,limit = 100):
         """
         returns all workerData with ordering and limit set as specified
         worker = worker ID to filter by
@@ -244,23 +284,22 @@ class WorkerDataDB(object):
         isDescending = True by default, gives most recent timestamps first
         limit = take what is needed to display.
         """
-        timeBoundary  = nowInSeconds() - withinSeconds
         requests = []
         self.log.debug("retrieving workerData, limit = %d"%limit)
         try:
             
             db = self.connectToDB()
             
-            if isDescending == True:
-                if withinSeconds == -1:
-                    query = 'select id,worker_id,worker_status, last_checkin_date from workerdata WHERE ORDER BY id DESC LIMIT %d'%limit
-                else: 
-                    query = "select id,worker_id,worker_status, last_checkin_date from workerdata where last_checkin_date > %d ORDER BY id DESC LIMIT %d"%(timeBoundary,limit)
-            else:
-                if withinSeconds == -1:
-                    query = 'select id,worker_id,worker_status, last_checkin_date from workerdata WHERE ORDER BY id LIMIT %d'%limit
+            if isPending == True:
+                if isDescending == True:
+                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, started_date,finished_date FROM workerdata WHERE finished_date IS NULL  ORDER BY id DESC LIMIT %d'%limit
                 else:
-                    query = "select id,worker_id,worker_status, last_checkin_date from workerdata where last_checkin_date > %d ORDER BY id LIMIT %d"%(timeBoundary,limit)
+                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, started_date,finished_date FROM workerdata WHERE finished_date IS NULL  ORDER BY id LIMIT %d'%limit
+            else:
+                if isDescending == True:
+                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, started_date,finished_date FROM workerdata WHERE finished_date IS NOT NULL ORDER BY id DESC LIMIT %d'%limit
+                else:
+                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, started_date,finished_date FROM workerdata WHERE finished_date IS NOT NULL ORDER BY id LIMIT %d'%limit
             
             cur = db.cursor()
             cur.execute(query)
@@ -278,7 +317,7 @@ class WorkerDataDB(object):
         return requests
     
 
-    def dropAllRequests(self):
+    def dropAllWorkerData(self):
         """
         for testing: truncate the db
         """

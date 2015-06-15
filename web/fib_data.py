@@ -33,40 +33,36 @@ class FibDataRequest(object):
             fibDataLogger.debug("initializing from database")
             
             self.requestId = row[0]
-            self.workerId = row[1]
-            self.fibId = row[2]
-            self.fibValue = row[3]
-            self.startedDate = row[4]
-            self.finishedDate = row[5]
+            self.fibId = row[1]
+            self.fibValue = row[2]
+            self.startedDate = row[3]
+            self.finishedDate = row[4]
         elif body != None:
             fibDataLogger.debug("initializing from JSON")
-            self.requestId = -1
             
-            if body.has_key('worker_id') == True:
-                self.workerId = body['worker_id']
+            if body.has_key('request_id') == True:
+                self.requestId = int(body['request_id'])
             else:
-                fibDataLogger.error("invalid JSON format, worker_id not found")
-                raise 'invalid format'
+                self.requestId = -1
             
             if body.has_key('fib_id') == True:
-                self.fibId = body['fib_id']
+                self.fibId = int(body['fib_id'])
             else:
                 fibDataLogger.error("invalid JSON format, fib_id not found")
                 raise 'invalid format'
             
             if body.has_key('fib_value') == True:
-                self.fibValue = body['fib_value']
+                self.fibValue = int(body['fib_value'])
             else:
-                fibDataLogger.error("invalid JSON format, fib_value  not found")
-                raise 'invalid format'    
+                self.fibValue = -1
             
             if body.has_key('started_date'):
-                self.startedDate = body['started_date']
+                self.startedDate = int(body['started_date'])
             else:
-                self.startedDate = None
+                self.startedDate = nowInSeconds()
     
             if body.has_key('finished_date'):
-                self.finishedDate = body['finished_date']
+                self.finishedDate = int(body['finished_date'])
             else:
                 self.finishedDate = None
 
@@ -119,7 +115,7 @@ class FibDataDB(object):
         
         try:
             db = self.connectToDB()
-            fibdataTableCreate = 'CREATE TABLE IF NOT EXISTS fibdata( request_id int not null auto_increment, worker_id char(100) not null, fib_id int not null, fib_value bigint not null, started_date int not null, finished_date int,PRIMARY KEY(request_id));'
+            fibdataTableCreate = 'CREATE TABLE IF NOT EXISTS fibdata( request_id int not null auto_increment, fib_id int not null, fib_value bigint not null, started_date int not null, finished_date int,PRIMARY KEY(request_id));'
             
             cur = db.cursor()
     
@@ -129,18 +125,7 @@ class FibDataDB(object):
             db.commit()
             self.log.debug('fibdata table created')
             
-            try:
-                workerIndexDrop = 'drop index worker_idx on fibdata;'
-                cur.execute(workerIndexDrop)
-                db.commit()
-            except:
-                self.log.debug('index doesnt exist')
-                
-            workerIndexCreate = 'CREATE INDEX  worker_idx ON fibdata(worker_id);'
-            cur.execute(workerIndexCreate)
-            db.commit()
             
-
             self.disconnectFromDB(db)
         
         except MySQLdb.Error, e:
@@ -204,19 +189,19 @@ class FibDataDB(object):
             
             
             if request.finishedDate == None:
-                self.log.debug("adding request into database with worker_id = '%s', fib_id = %d, fib_value = %d and started_date = %d"%(request.workerId,request.fibId,request.fibValue,request.startedDate))
-                query = "insert into fibdata(worker_id, fib_id,fib_value,started_date) values('%s',%d, %d,%d)"%(request.workerId, request.fibId, request.fibValue,request.startedDate)
+                self.log.debug("adding request into database with  fib_id = %d, fib_value = %d and started_date = %d"%(request.fibId,request.fibValue,request.startedDate))
+                query = "insert into fibdata(fib_id,fib_value,started_date) values(%d, %d,%d)"%( request.fibId, request.fibValue,request.startedDate)
             else:
-                self.log.debug("adding request into database with worker_id = '%s', fib_id = %d, fib_value = %d, started_date = %d, finished_date = %d"%(request.workerId,request.fibId,request.fibValue,request.startedDate,request.finishedDate))
-                query = "insert into fibdata(worker_id, fib_id,fib_value,started_date,finished_date) values('%s',%d, %d,%d,%d)"%(request.workerId, request.fibId, request.fibValue,request.startedDate,request.finishedDate)
+                self.log.debug("adding request into database with fib_id = %d, fib_value = %d, started_date = %d, finished_date = %d"%(request.fibId,request.fibValue,request.startedDate,request.finishedDate))
+                query = "insert into fibdata( fib_id,fib_value,started_date,finished_date) values(%d, %d,%d,%d)"%(request.fibId, request.fibValue,request.startedDate,request.finishedDate)
             
             
             cur.execute(query)
             db.commit()
             
-            # get generated ID
+            # get generated ID - THIS IS VALID PER CONNECTION
             
-            query = "select max(request_id) from fibdata where worker_id = '%s'"%(request.workerId)
+            query = "SELECT LAST_INSERT_ID()"
             cur.execute(query)
             
             row = cur.fetchone()
@@ -238,7 +223,7 @@ class FibDataDB(object):
         try:
             
             db = self.connectToDB()
-            query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where request_id = %d'%requestId
+            query = 'select request_id,fib_id, fib_value,started_date, finished_date from fibdata where request_id = %d'%requestId
             
             cur = db.cursor()
             cur.execute(query)
@@ -268,7 +253,7 @@ class FibDataDB(object):
             cur = db.cursor()
             finishedDate = nowInSeconds()
             self.log.debug("updating request  with fib_id = %d and fib_value = %d and requestId = %d"%(request.fibId,request.fibValue,request.requestId))
-            query = "update fibdata set worker_id = '%s', fib_value=%d,finished_date=%d where request_id = %d"%(request.workerId, request.fibValue,finishedDate, request.requestId)
+            query = "update fibdata  set fib_value=%d,finished_date=%d where request_id = %d"%(request.fibValue,finishedDate, request.requestId)
             cur.execute(query)
             db.commit()
             self.disconnectFromDB(db)
@@ -279,10 +264,9 @@ class FibDataDB(object):
             self.handleMySQLException(e)
     
     
-    def getRequests(self,worker = None, isPending=False, isDescending=True,limit = 100):
+    def getRequests(self,isPending=False, isDescending=True,limit = 100):
         """
         returns all requests with ordering and limit set as specified
-        worker = worker ID to filter by
         isPending = fetch requests with a null complete time (meaning they're still in progress
         isDescending = True by default, gives most recent timestamps first
         limit = take what is needed to display.
@@ -296,28 +280,15 @@ class FibDataDB(object):
             db = self.connectToDB()
             
             if isDescending == True:
-                if worker == None:
-                    if isPending == False:
-                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE finished_date IS NOT NULL ORDER BY fib_id DESC LIMIT %d'%limit
-                    else:
-                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE finished_date IS NULL ORDER BY fib_id DESC LIMIT %d'%limit
-                else: 
-                    if isPending == False:
-                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' and finished_date IS NOT  NULL ORDER BY fib_id DESC LIMIT %d"%(worker,limit)
-                    else:
-                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' and finished_date IS NULL ORDER BY fib_id DESC LIMIT %d"%(worker,limit)
-                        
-            else:
-                if worker == None:
-                    if isPending == False:
-                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE  finished_date IS NOT NULL ORDER BY fib_id LIMIT %d'%limit # will order ASC because message_id is the primary key
-                    else:
-                        query = 'select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE  finished_date IS NULL ORDER BY fib_id LIMIT %d'%limit # will order ASC because message_id is the primary key
+                if isPending == False:
+                    query = 'select request_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE finished_date IS NOT NULL ORDER BY fib_id DESC LIMIT %d'%limit
                 else:
-                    if isPending == False:
-                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' and finished_date IS NOT NULL ORDER BY fib_id  LIMIT %d"%(worker,limit) # will order ASC because message_id is the primary key
-                    else:
-                        query = "select request_id,worker_id,fib_id, fib_value,started_date, finished_date from fibdata where worker_id = '%s' and finished_date IS NULL ORDER BY fib_id  LIMIT %d"%(worker,limit) # will order ASC because message_id is the primary key
+                    query = 'select request_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE finished_date IS NULL ORDER BY fib_id DESC LIMIT %d'%limit
+            else:
+                if isPending == False:
+                    query = 'select request_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE  finished_date IS NOT NULL ORDER BY fib_id LIMIT %d'%limit # will order ASC because message_id is the primary key
+                else:
+                    query = 'select request_id,fib_id, fib_value,started_date, finished_date from fibdata WHERE  finished_date IS NULL ORDER BY fib_id LIMIT %d'%limit # will order ASC because message_id is the primary key
             
             cur = db.cursor()
             cur.execute(query)

@@ -7,7 +7,6 @@ import MySQLdb
 import urlparse
 import os
 import logging
-from fib_data import FibDataDB
 from worker_data import WorkerDataDB
 
 if __name__ == '__main__':
@@ -23,15 +22,17 @@ if __name__ == '__main__':
             log.warn("env variable MYSQL_URL not found, reverting to DATABASE_URL")
             mysqlUrl = urlparse.urlparse(os.environ['DATABASE_URL'])
         
+        
         url = mysqlUrl.hostname
+        log.debug("url = %s"%url)
         password = mysqlUrl.password
+        log.debug("password = %s"%password) 
         userName = mysqlUrl.username
+        log.debug("username = %s"%userName)
         dbName = mysqlUrl.path[1:] # slice off the '/'
+        log.debug("dbName = %s"%dbName) 
         
-        fibdataDB = FibDataDB(url,dbName,userName,password)
         
-        fibdataDB.createTable()
-        log.info("fibdata table created")
           
         workerDataDB = WorkerDataDB(url,dbName,userName,password)
         workerDataDB.createTable()    

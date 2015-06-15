@@ -5,48 +5,69 @@ import bottle
 import logging
 import urlparse
 import uuid
-from fib_data import  FibDataRequest
-from messages import MessageQueue
+from messages import MessageQueue, WorkResultMessage, WorkRequestMessage
 from bottle import route, get
 from startup_utils import initializeDB
 from threading import Thread
 from date_formatting_utils import nowInSeconds, prettyPrintTime
 from response_handler import ResponseHandler
+from worker_data import WorkerData, WorkerDataDB
+import json
+import sys
 
 STATIC_ROOT = os.path.join(os.path.dirname(__file__), 'static')
 
 responseHandler = None
-fibDataDB = None
-messageQueue = None
+workerDataDB = None
+jobMessageQueue = None
+resultsMessageQueue = None
 
 '''
 message queue processing thread logic
 '''
 
-def getMessages(messageQueue, fibDataDB, workerId):
+def doWork(jobMessageQueue, resultsMessageQueue, workerDataDB, workerId):
     
-        ''' 
-        the processMessage method encapsulates bookkeeping in the database and keeps it separate from
-        message queue logic. Not sure if we can do this in other languages...
-        '''
-    
+        
         def processMessage(message):
+            '''
+            this is the handler function passed to getAndProcessMessages
+            '''
             dataMap = {}
             dataMap['worker_id'] = workerId
+            dataMap['request_id'] = message.requestId
             dataMap['fib_id'] = message.messageKey
             dataMap['fib_value'] = -1
-            dataMap['started_date'] =  nowInSeconds()
+            dataMap['started_date'] =  message.startedDate
             
-            request = FibDataRequest(body=dataMap)
-            log.debug("worker %s starting Fibonnaci on %d at %s"%(workerId,request.fibId,prettyPrintTime(request.startedDate)) )
-            addedRequest = fibDataDB.addRequest(request)
+            workerData = WorkerData(body=dataMap)
+            log.debug("worker %s starting Fibonnaci on %d at %s"%(workerId,workerData.fibId,prettyPrintTime(nowInSeconds())) )
+            addedWorkerData = workerDataDB.addWorkerData(workerData)
             fibValue = F(message.messageKey)
-            addedRequest.fibValue = fibValue
-            addedRequest.finishedDate = nowInSeconds()
-            fibDataDB.updateRequest(addedRequest)
-            log.debug("worker %s finished Fibonnaci on %d, calculated value = %d,  at %s"%(workerId,request.fibId,request.fibValue,prettyPrintTime(request.startedDate)) )
+            addedWorkerData.fibValue = fibValue
+            addedWorkerData.finishedDate = nowInSeconds()
+            workerDataDB.updateWorkerData(addedWorkerData)
+            
+            log.debug("worker %s finished Fibonnaci on %d, calculated value = %d,  at %s"%(workerId,addedWorkerData.fibId,addedWorkerData.fibValue,prettyPrintTime(addedWorkerData.finishedDate)) )
+            
+            # now send result back for result processing.
+            resultsMessageQueue.sendMessage(WorkResultMessage(requestId = workerData.requestId, messageKey = workerData.fibId, messageValue = workerData.fibValue,startedDate = workerData.startedDate,finishedDate = workerData.finishedDate))
+            
+            
+        def extractWorkRequestMessage(messageBody):
+            """
+            for handling request messages from job request queue
+            """
+            messageContents = json.loads(messageBody)
+            try:
+                
+                message = WorkRequestMessage(body=messageContents)
+                return message
+            except:
+                log.error(str(sys.exc_info()[0]))
+                    
     
-        messageQueue.getAndProcessMessages(queueName,processMessage)
+        jobMessageQueue.getAndProcessMessages(processMessage,extractWorkRequestMessage)
 
 @route('/')
 @route("/index.html")
@@ -115,30 +136,34 @@ except KeyError:
     mysql_url = urlparse.urlparse(os.environ['DATABASE_URL'])
 
 
-fibDataDB = initializeDB(mysql_url)
+workerDataDB = initializeDB(mysql_url)
 
 log.debug("setting up message queue")
 
 rabbitUrl = os.environ['RABBITMQ_URL']
-queueName = os.environ['QUEUE_NAME']
+jobQueueName = os.environ['JOBS_QUEUE_NAME']
+resultsQueueName = os.environ['RESULTS_QUEUE_NAME']
 restInterval  = int(os.getenv('REST_INTERVAL',5))
 log.debug("rabbit mq url:%s"%os.environ['RABBITMQ_URL'])
 
-messageQueue = MessageQueue(rabbitUrl)
+jobMessageQueue = MessageQueue(rabbitUrl)
+jobMessageQueue.createQueue(jobQueueName)
 
-messageQueue.createQueue(queueName)
+resultsMessageQueue = MessageQueue(rabbitUrl)
+resultsMessageQueue.createQueue(resultsQueueName)
 
+# worker ID is unique to this instance of worker
 log.debug("generating worker ID")
-
 workerId = uuid.uuid1()
 
-# need to receive messages async so that the process can also handle web requests.
+# need to receive work requests async in order to also handle web requests
 
-t = Thread(name='daemon', target=getMessages, args = (messageQueue,fibDataDB,workerId))
-t.setDaemon(True)
-t.start()
+workerT = Thread(name='daemon', target=doWork, args = (jobMessageQueue,resultsMessageQueue,workerDataDB,workerId))
+workerT.setDaemon(True)
+workerT.start()
 
-responseHandler = ResponseHandler(workerId,fibDataDB)
+
+responseHandler = ResponseHandler(workerId,workerDataDB)
 
 log.debug("starting web server")
 application = bottle.app()
