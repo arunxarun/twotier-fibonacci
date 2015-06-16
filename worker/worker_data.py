@@ -264,8 +264,8 @@ class WorkerDataDB(object):
             db = self.connectToDB()
             cur = db.cursor()
             
-            self.log.debug("update workerData set fib_value = %d, finished_date = %d where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.id))
-            query = "update workerData set fib_value = %d, finished_date = %d where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.id)
+            self.log.debug("update workerdata set fib_value = %d, finished_date = %d where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.id))
+            query = "update workerdata set fib_value = %d, finished_date = %d where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.id)
             cur.execute(query)
             db.commit()
             self.disconnectFromDB(db)

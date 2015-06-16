@@ -17,17 +17,16 @@ $(document).ready(function() {
 			
 			console.log(data);
 			var obj = $.parseJSON(data);
-			inProcessTable.rows().remove();
+			// BUGBUG: for some reason this doesn't remove
+			//inProcessTable.rows().remove();
+			inProcessTable.clear();
 			$.each(obj, function() {
 				val = 0;
 				if (this['workerData']['fibValue'] == -1){
 					val = 'in progress';
+				
+					inProcessTable.row.add([this['workerData']['workerId'],this['workerData']['fibId'],val,this['formattedStartDate'],this['runTime']]).draw();
 				}
-				else {
-					
-					val = this['workerData']['fibValue'];
-				}
-				inProcessTable.row.add([this['workerData']['workerId'],this['workerData']['fibId'],val,this['formattedStartDate'],this['runTime']]).draw();
 			});
 						
 		});
@@ -37,7 +36,8 @@ $(document).ready(function() {
 			
 			console.log(data);
 			var obj = $.parseJSON(data);
-			completeTable.rows().remove();
+			//completeTable.rows().remove();
+			completeTable.clear();
 			$.each(obj, function() {
 				
 				completeTable.row.add([this['workerData']['workerId'],this['workerData']['fibId'],this['workerData']['fibValue'],this['workerData']['workerId'],this['formattedStartDate'],this['formattedFinishDate']]).draw();

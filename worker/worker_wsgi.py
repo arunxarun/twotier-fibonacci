@@ -42,9 +42,15 @@ def doWork(jobMessageQueue, resultsMessageQueue, workerDataDB, workerId):
             
             workerData = WorkerData(body=dataMap)
             log.debug("worker %s starting Fibonnaci on %d at %s"%(workerId,workerData.fibId,prettyPrintTime(nowInSeconds())) )
+            
+            # BUGBUG: need to check that this already hasn't been attempted, and 
+            # then remove it from the database. 
+            
             addedWorkerData = workerDataDB.addWorkerData(workerData)
+            log.debug("starting fib(%d)"%workerData.fibId)
             fibValue = F(message.messageKey)
             addedWorkerData.fibValue = fibValue
+            log.debug("completed fib(%d), value = %d"%(workerData.fibId,fibValue))
             addedWorkerData.finishedDate = nowInSeconds()
             workerDataDB.updateWorkerData(addedWorkerData)
             

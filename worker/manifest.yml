@@ -3,13 +3,14 @@ applications:
    name: fibonacci-worker
    mem: 128M
    services:
-    fibonacci-v2-db:
+    fibonacci-worker:
       type: mysql
     airlift-mq:
       type: rabbitmq3   
    stackato:
     env:
-        QUEUE_NAME: fibq-2tier
+        JOBS_QUEUE_NAME: fibq_jobs
+        RESULTS_QUEUE_NAME: fibq_results
         REST_INTERVAL: 5
     hooks:
         post-staging: python create_populate_db.py
