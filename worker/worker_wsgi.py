@@ -64,7 +64,7 @@ def doWork(jobMessageQueue, resultsMessageQueue, workerDataDB, workerId):
             log.debug("worker %s finished Fibonnaci on %d, calculated value = %d,  at %s"%(workerId,addedWorkerData.fibId,addedWorkerData.fibValue,prettyPrintTime(addedWorkerData.finishedDate)) )
             
             # now send result back for result processing.
-            resultsMessageQueue.sendMessage(WorkResultMessage(requestId = workerData.requestId, messageKey = workerData.fibId, messageValue = workerData.fibValue,startedDate = workerData.startedDate,finishedDate = workerData.finishedDate))
+            resultsMessageQueue.sendMessage(WorkResultMessage(requestId = addedWorkerData.requestId, messageKey = addedWorkerData.fibId, messageValue = addedWorkerData.fibValue,startedDate = addedWorkerData.startedDate,finishedDate = addedWorkerData.finishedDate))
             
             
         def extractWorkRequestMessage(messageBody):
@@ -117,6 +117,7 @@ Fibonacci sequence, recursive
 '''
 
 def F(n):
+    #log.debug("F(%d)"%n)
     if n == 0: return 0
     elif n == 1: return 1
     else: return F(n-1)+F(n-2)

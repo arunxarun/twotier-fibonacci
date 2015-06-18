@@ -269,10 +269,8 @@ class WorkerDataDB(object):
         updates a specified workerData, setting workerStatus and lastCheckinDate values ONLY.
         (those are the things that can change)
         """
-        # explicit fail if the record hasn't been added
+    
         
-        if workerData.id == -1:
-            raise 'cannot update a request that has not been added already'
         
         try:
             db = self.connectToDB()
