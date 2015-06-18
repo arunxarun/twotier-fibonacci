@@ -40,10 +40,11 @@ class WorkerData(object):
             self.workerId = row[2]
             self.fibId = row[3]
             self.fibValue = row[4]
-            self.startedDate = row[5]
-        
-            if len(row) == 7:
-                self.finishedDate = row[6]
+            self.retryCount = row[5]
+            self.startedDate = row[6]
+            
+            if len(row) == 8:
+                self.finishedDate = row[7]
             else:
                 self.finishedDate = None
             
@@ -70,16 +71,23 @@ class WorkerData(object):
                 workerDataLogger.error("invalid JSON format, fib_id not found")
                 raise 'invalid format'
             
-            if body.has_key('fib_data'):
-                self.fibData = body['fib_data']
+            if body.has_key('fib_value'):
+                self.fibValue = body['fib_value']
             else:
-                self.fibData = -1
+                self.fibValue = -1
+            
+            if body.has_key("retry_count"):
+                self.finishedDate = body['retry_count']
+            else:
+                self.retryCount = 0
+            
             
             if body.has_key("started_date"):
                 self.startedDate = body['started_date']
             else:
                 self.startedDate = nowInSeconds()
             
+                
             if body.has_key("finished_date"):
                 self.finishedDate = body['finished_date']
             else:
@@ -125,7 +133,7 @@ class WorkerDataDB(object):
         
         try:
             db = self.connectToDB()
-            workerDataTableCreate = 'CREATE TABLE IF NOT EXISTS workerdata( id int not null auto_increment, request_id int, worker_id char(100) not null, fib_id int not null, fib_value int DEFAULT -1, started_date int not null, finished_date int, PRIMARY KEY(id));'
+            workerDataTableCreate = 'CREATE TABLE IF NOT EXISTS workerdata( id int not null auto_increment, request_id int, worker_id char(100) not null, fib_id int not null, fib_value int DEFAULT -1, retry_count int DEFAULT 0, started_date int not null, finished_date int, PRIMARY KEY(id));'
             
             cur = db.cursor()
     
@@ -228,20 +236,26 @@ class WorkerDataDB(object):
             self.log.error(str(e))
             self.handleMySQLException(e)
        
-    def  getWorkerData(self,workerId):
+    def  getWorkerData(self,workerId = None, requestId = None):
         """
         returns a workerData with the specified workerId or None
         """
         try:
             
             db = self.connectToDB()
-            query = "select id,request_id, worker_id,fib_id,fib_value,started_date,finished_date from workerdata where worker_id = '%s'"%workerId
+            if workerId != None:
+                query = "select id,request_id, worker_id,fib_id,fib_value,retry_count,started_date,finished_date from workerdata where worker_id = '%s'"%workerId
+            elif requestId != None:
+                query = "select id,request_id, worker_id,fib_id,fib_value,retry_count,started_date,finished_date from workerdata where request_id = '%s'"%requestId
             
             cur = db.cursor()
             cur.execute(query)
             row = cur.fetchone()
             
-            workerData = WorkerData(row)
+            workerData = None
+            
+            if row != None:
+                workerData = WorkerData(row)
          
             return workerData
         
@@ -264,8 +278,14 @@ class WorkerDataDB(object):
             db = self.connectToDB()
             cur = db.cursor()
             
-            self.log.debug("update workerdata set fib_value = %d, finished_date = %d where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.id))
-            query = "update workerdata set fib_value = %d, finished_date = %d where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.id)
+            query = None
+            if(workerData.fibValue > -1):
+                self.log.debug("update workerdata set fib_value = %d, finished_date = %d, retry_count = %d where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.retryCount, workerData.id))
+                query = "update workerdata set fib_value = %d, finished_date = %d, retry_count = %d  where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.retryCount,workerData.id)
+            else:
+                self.log.debug("update workerdata set  retry_count = %d where id=%d"%( workerData.retryCount, workerData.id))
+                query = "update workerdata set retry_count = %d  where id=%d"%(workerData.retryCount,workerData.id)
+           
             cur.execute(query)
             db.commit()
             self.disconnectFromDB(db)
@@ -292,14 +312,14 @@ class WorkerDataDB(object):
             
             if isPending == True:
                 if isDescending == True:
-                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, started_date,finished_date FROM workerdata WHERE finished_date IS NULL  ORDER BY id DESC LIMIT %d'%limit
+                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NULL  ORDER BY id DESC LIMIT %d'%limit
                 else:
-                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, started_date,finished_date FROM workerdata WHERE finished_date IS NULL  ORDER BY id LIMIT %d'%limit
+                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NULL  ORDER BY id LIMIT %d'%limit
             else:
                 if isDescending == True:
-                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, started_date,finished_date FROM workerdata WHERE finished_date IS NOT NULL ORDER BY id DESC LIMIT %d'%limit
+                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NOT NULL ORDER BY id DESC LIMIT %d'%limit
                 else:
-                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, started_date,finished_date FROM workerdata WHERE finished_date IS NOT NULL ORDER BY id LIMIT %d'%limit
+                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NOT NULL ORDER BY id LIMIT %d'%limit
             
             cur = db.cursor()
             cur.execute(query)

@@ -64,10 +64,18 @@ class Test(unittest.TestCase):
         
         newWorkerData = workerDataDB.addWorkerData(workerData)
         
-        checkWorkerData = workerDataDB.getWorkerData(newWorkerData.workerId)
+        checkWorkerData = workerDataDB.getWorkerData(workerId = newWorkerData.workerId)
         
+        self.assertTrue(checkWorkerData.requestId == workerData.requestId)
         self.assertTrue(checkWorkerData.workerId == workerData.workerId)
         self.assertTrue(checkWorkerData.fibId == workerData.fibId)
+        
+        checkWorkerData = workerDataDB.getWorkerData(requestId = newWorkerData.requestId)
+        
+        self.assertTrue(checkWorkerData.requestId == workerData.requestId)
+        self.assertTrue(checkWorkerData.workerId == workerData.workerId)
+        self.assertTrue(checkWorkerData.fibId == workerData.fibId)
+        
 
     def testUpdateWorkerData(self):
         
@@ -135,8 +143,17 @@ class Test(unittest.TestCase):
         
         self.assertTrue(len(workerDatas) == 0)
 
+    def testUpdateRetryCount(self):
+        workerDataDB = initializeWorkerDataDB(self.testName)
+        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3})
+        workerDataDB.addWorkerData(workerData)
         
-
+        newRetryCount = workerData.retryCount  = workerData.retryCount+1
+         
+        workerDataDB.updateWorkerData(workerData) 
+        
+        updatedWorkerData = workerDataDB.getWorkerData(workerId = "abcd")
+        self.assertTrue(updatedWorkerData.retryCount == newRetryCount)
 
     def tearDown(self):
         try:

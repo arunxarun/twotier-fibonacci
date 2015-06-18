@@ -46,7 +46,14 @@ def doWork(jobMessageQueue, resultsMessageQueue, workerDataDB, workerId):
             # BUGBUG: need to check that this already hasn't been attempted, and 
             # then remove it from the database. 
             
-            addedWorkerData = workerDataDB.addWorkerData(workerData)
+            addedWorkerData = workerDataDB.getWorkerData(requestId = workerData.requestId)
+            
+            if addedWorkerData != None:
+                workerData.retryCount = workerData.retryCount + 1
+                workerDataDB.updateWorkerData(workerData)
+            else:
+                addedWorkerData = workerDataDB.addWorkerData(workerData)
+                
             log.debug("starting fib(%d)"%workerData.fibId)
             fibValue = F(message.messageKey)
             addedWorkerData.fibValue = fibValue

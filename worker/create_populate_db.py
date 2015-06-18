@@ -31,9 +31,8 @@ if __name__ == '__main__':
         log.debug("username = %s"%userName)
         dbName = mysqlUrl.path[1:] # slice off the '/'
         log.debug("dbName = %s"%dbName) 
-        
-        
           
+        
         workerDataDB = WorkerDataDB(url,dbName,userName,password)
         workerDataDB.createTable()    
         log.info("workerdata table created")
