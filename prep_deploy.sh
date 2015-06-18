@@ -9,6 +9,5 @@ do
 	cp -r $dest deploy/$dest
 	rm -rf deploy/$dest/test
 	cp messaging/*.py deploy/$dest
-	cp data/*.py deploy/$dest
 	cp utils/*.py deploy/$dest
 done
