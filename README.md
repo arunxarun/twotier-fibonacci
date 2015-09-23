@@ -5,10 +5,10 @@ to deploy to a remote HP Helion Development Platform Trial cluster, installed fo
 
 
 1. run ./prep-deploy.sh
-2. cd deploy/web
+2. cd deploy
 3. helion push -n
-4. cd ../worker
-5. helion push -n
+
+Or you can deploy individual services from web and worker directories respectively. The deploy directory is created to copy shared resources into deploy directories. 
 
 required services:
 * rabbit-mq
