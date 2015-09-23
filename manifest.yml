@@ -1,0 +1,33 @@
+applications:
+  web:
+   name: web
+   depends-on: worker
+   mem: 128M
+   services:
+    web:
+      type: mysql
+    airlift-mq:
+      type: rabbitmq3   
+   helion:
+    env:
+        JOBS_QUEUE_NAME: fibq_jobs
+        RESULTS_QUEUE_NAME: fibq_results
+        REST_INTERVAL: 5
+    hooks:
+        post-staging: python create_populate_db.py
+  worker:
+   name: worker
+   mem: 128M
+   services:
+    worker:
+      type: mysql
+    airlift-mq:
+      type: rabbitmq3   
+   helion:
+    env:
+        JOBS_QUEUE_NAME: fibq_jobs
+        RESULTS_QUEUE_NAME: fibq_results
+        REST_INTERVAL: 5
+    hooks:
+        post-staging: python create_populate_db.py
+  
