@@ -4,8 +4,8 @@ import os
 import bottle
 import logging
 import urlparse
+import uuid
 from fib_data import  FibDataDB,FibDataRequest, DataEncoder, FormattedRequest
-
 from bottle import route, get, post, request, template
 from messages import WorkRequestMessage, WorkResultMessage
 import sys
@@ -102,7 +102,8 @@ def fib():
         return template('Please add a number to the end of url: /send/5')
     fibDataPayload = {}
     fibDataPayload['fib_id'] = number;
-    
+    requestId = str(uuid.uuid1())
+    fibDataPayload['request_id'] = requestId
     fibDataRequest = FibDataRequest(body=fibDataPayload)
     newRequest = fibDataDB.addRequest(fibDataRequest)
     jobMessageQueue.sendMessage(WorkRequestMessage(requestId = newRequest.requestId, messageKey = int(number)))

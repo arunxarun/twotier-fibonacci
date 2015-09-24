@@ -52,10 +52,10 @@ class Test(unittest.TestCase):
        
         try:
             fibDataDB = initializeFibDataDB(self.testName)
-            fibData = FibDataRequest(None,{"fib_id":3, "fib_value":2})
+            fibData = FibDataRequest(None,{"request_id":"foo1","fib_id":3, "fib_value":2})
             newFD = fibDataDB.addRequest(fibData)
         
-            self.assertTrue(newFD.requestId != -1)
+            self.assertTrue(newFD.requestId == 'foo1')
             self.assertTrue(newFD.fibId == fibData.fibId)
             self.assertTrue(newFD.fibValue == fibData.fibValue)
             self.assertTrue(newFD.startedDate == fibData.startedDate)
@@ -71,7 +71,7 @@ class Test(unittest.TestCase):
             fibDataDB = initializeFibDataDB(self.testName)
             startedDate =  nowInSeconds()
             
-            fd = FibDataRequest(None, {"fib_id":3,"fib_value":3,"started_date": startedDate})
+            fd = FibDataRequest(None, {"request_id":"foo1","fib_id":3,"fib_value":3,"started_date": startedDate})
             
             newFd = fibDataDB.addRequest(fd)
             
@@ -90,7 +90,7 @@ class Test(unittest.TestCase):
         try:
             fibDataDB = initializeFibDataDB(self.testName)
             startedDate = nowInSeconds()
-            fd = FibDataRequest(None, {"fib_id":3,"fib_value":3,"started_date": startedDate})
+            fd = FibDataRequest(None, {"request_id":"foo2","fib_id":3,"fib_value":3,"started_date": startedDate})
             
             newFd = fibDataDB.addRequest(fd)
             fdArr = fibDataDB.getRequests(isPending = True)
@@ -125,6 +125,7 @@ class Test(unittest.TestCase):
     def test5InitializeFromJSON(self):
         try:
             dataMap = {}
+            dataMap['request_id'] ="foo1"
             dataMap['fib_id'] = 3
             dataMap['fib_value'] = 3
             dataMap['started_date'] =  nowInSeconds()
@@ -143,7 +144,7 @@ class Test(unittest.TestCase):
     def test6AddRequestWithFinishedDate(self):
         try:
             fibDataDB = initializeFibDataDB(self.testName)
-            fibData = FibDataRequest(None,{"fib_id":3, "fib_value":2, "started_date" :nowInSeconds(), "finished_date" : nowInSeconds()})
+            fibData = FibDataRequest(None,{"request_id":"foo1","fib_id":3, "fib_value":2, "started_date" :nowInSeconds(), "finished_date" : nowInSeconds()})
             newFD = fibDataDB.addRequest(fibData)
         
             self.assertTrue(newFD.requestId != -1)
@@ -156,13 +157,29 @@ class Test(unittest.TestCase):
             print e
             self.fail(e)
         
-                
+    def test7Add_UpdateRequest(self):
+        try:
+        
+            fibDataDB = initializeFibDataDB(self.testName)
+            fibData = FibDataRequest(None,{"request_id":"foo1","fib_id":3, "fib_value":2, "started_date" :nowInSeconds(), "finished_date" : nowInSeconds()})
+            newFD = fibDataDB.addRequest(fibData)
+            
+            finishedDate = nowInSeconds()+5
+            fibData.finishedDate = finishedDate
+            
+            fibDataDB.updateRequest(fibData)
+            
+        except:
+            e = sys.exc_info()[0]
+            print e
+            self.fail(e)
+            
     def test12Add_UpdateRequest_FetchAllCompleteTasks(self):
         
         fibDataDB = initializeFibDataDB(self.testName)
         finishedDate = nowInSeconds()
         startedDate = finishedDate - 5;
-        fd = FibDataRequest(None, {"fib_id":3,"fib_value":3,"started_date": startedDate,"finished_date":finishedDate})
+        fd = FibDataRequest(None, {"request_id":"foo1","fib_id":3,"fib_value":3,"started_date": startedDate,"finished_date":finishedDate})
         
         fibDataDB.addRequest(fd)
         fdArr = fibDataDB.getRequests(isPending = False)
@@ -171,7 +188,7 @@ class Test(unittest.TestCase):
         
         startedDate = nowInSeconds()
         
-        fd = FibDataRequest(None, {"fib_id":3,"fib_value":3,"started_date": startedDate})
+        fd = FibDataRequest(None, {"request_id":"foo2","fib_id":3,"fib_value":3,"started_date": startedDate})
                 
         fibDataDB.addRequest(fd)
         fdArr = fibDataDB.getRequests(isPending = False)
@@ -182,8 +199,8 @@ class Test(unittest.TestCase):
         try:
             fibDataDB = initializeFibDataDB(self.testName)
             startedDate = nowInSeconds()
-            fd = FibDataRequest(None, {"fib_id":3,"fib_value":3,"started_date": startedDate})
-            fd2 = FibDataRequest(None,{"fib_id":4,"fib_value":5,"started_date": startedDate})
+            fd = FibDataRequest(None, {"request_id":"foo1","fib_id":3,"fib_value":3,"started_date": startedDate})
+            fd2 = FibDataRequest(None,{"request_id":"foo2","fib_id":4,"fib_value":5,"started_date": startedDate})
             fibDataDB.addRequest(fd)
             fibDataDB.addRequest(fd2)
             

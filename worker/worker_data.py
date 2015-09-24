@@ -35,22 +35,20 @@ class WorkerData(object):
         # SELECT id,request_id, worker_id,fib_id,fib_value, started_date,finished_date
         if row != None:
             workerDataLogger.debug("initializing from database")
-            self.id = row[0]
-            self.requestId = row[1]
-            self.workerId = row[2]
-            self.fibId = row[3]
-            self.fibValue = row[4]
-            self.retryCount = row[5]
-            self.startedDate = row[6]
+            self.requestId = row[0]
+            self.workerId = row[1]
+            self.fibId = row[2]
+            self.fibValue = row[3]
+            self.retryCount = row[4]
+            self.startedDate = row[5]
             
-            if len(row) == 8:
-                self.finishedDate = row[7]
+            if len(row) == 7:
+                self.finishedDate = row[6]
             else:
                 self.finishedDate = None
             
         elif body != None:
             workerDataLogger.debug("initializing from JSON")
-            self.id = -1
             
             if body.has_key('request_id') == True:
                 self.requestId = body['request_id']
@@ -133,7 +131,7 @@ class WorkerDataDB(object):
         
         try:
             db = self.connectToDB()
-            workerDataTableCreate = 'CREATE TABLE IF NOT EXISTS workerdata( id int not null auto_increment, request_id int, worker_id char(100) not null, fib_id int not null, fib_value int DEFAULT -1, retry_count int DEFAULT 0, started_date int not null, finished_date int, PRIMARY KEY(id));'
+            workerDataTableCreate = 'CREATE TABLE IF NOT EXISTS workerdata(request_id char(100) not null, worker_id char(100) not null, fib_id int not null, fib_value int DEFAULT -1, retry_count int DEFAULT 0, started_date int not null, finished_date int, PRIMARY KEY(request_id));'
             
             cur = db.cursor()
     
@@ -203,6 +201,8 @@ class WorkerDataDB(object):
             
         raise e
     
+        
+        
     def addWorkerData(self,workerData):
         """
         inserts a workerData into the database and timestamps it for readability
@@ -213,20 +213,11 @@ class WorkerDataDB(object):
             cur = db.cursor()
             
             
-            self.log.debug("adding worker entry into database with request_id %d, worker_id = '%s', fib_id=%d, startedDate = %s"%(workerData.requestId,workerData.workerId,workerData.fibId,nowInSeconds()))
-            query = "insert into workerdata(request_id, worker_id, fib_id,started_date) values(%d,'%s',%d,%d)"%(workerData.requestId,workerData.workerId,workerData.fibId,nowInSeconds())
+            self.log.debug("adding worker entry into database with request_id '%s', worker_id = '%s', fib_id=%d, startedDate = %s"%(workerData.requestId,workerData.workerId,workerData.fibId,nowInSeconds()))
+            query = "insert into workerdata(request_id, worker_id, fib_id,started_date) values('%s','%s',%d,%d)"%(workerData.requestId,workerData.workerId,workerData.fibId,nowInSeconds())
             
             cur.execute(query)
             db.commit()
-            
-            # get generated ID - THIS IS VALID PER CONNECTION
-            
-            query = "SELECT LAST_INSERT_ID()";
-            cur.execute(query)
-            
-            row = cur.fetchone()
-            id = row[0]
-            workerData.id = id
             
             self.disconnectFromDB(db)
             
@@ -244,9 +235,9 @@ class WorkerDataDB(object):
             
             db = self.connectToDB()
             if workerId != None:
-                query = "select id,request_id, worker_id,fib_id,fib_value,retry_count,started_date,finished_date from workerdata where worker_id = '%s'"%workerId
+                query = "select request_id, worker_id,fib_id,fib_value,retry_count,started_date,finished_date from workerdata where worker_id = '%s'"%workerId
             elif requestId != None:
-                query = "select id,request_id, worker_id,fib_id,fib_value,retry_count,started_date,finished_date from workerdata where request_id = '%s'"%requestId
+                query = "select request_id, worker_id,fib_id,fib_value,retry_count,started_date,finished_date from workerdata where request_id = '%s'"%requestId
             
             cur = db.cursor()
             cur.execute(query)
@@ -278,11 +269,11 @@ class WorkerDataDB(object):
             
             query = None
             if(workerData.fibValue > -1):
-                self.log.debug("update workerdata set fib_value = %d, finished_date = %d, retry_count = %d where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.retryCount, workerData.id))
-                query = "update workerdata set fib_value = %d, finished_date = %d, retry_count = %d  where id=%d"%(workerData.fibValue,nowInSeconds(), workerData.retryCount,workerData.id)
+                self.log.debug("update workerdata set fib_value = %d, finished_date = %d, retry_count = %d where request_id='%s'"%(workerData.fibValue,nowInSeconds(), workerData.retryCount, workerData.requestId))
+                query = "update workerdata set fib_value = %d, finished_date = %d, retry_count = %d  where request_id='%s'"%(workerData.fibValue,nowInSeconds(), workerData.retryCount,workerData.requestId)
             else:
-                self.log.debug("update workerdata set  retry_count = %d where id=%d"%( workerData.retryCount, workerData.id))
-                query = "update workerdata set retry_count = %d  where id=%d"%(workerData.retryCount,workerData.id)
+                self.log.debug("update workerdata set  fib_value = %d, started_date = %d, worker_id = '%s', retry_count = %d where request_id='%s'"%( workerData.fibValue,workerData.startedDate,workerData.workerId,workerData.retryCount, workerData.requestId))
+                query = "update workerdata set retry_count = %d  where request_id='%s'"%(workerData.retryCount,workerData.requestId)
            
             cur.execute(query)
             db.commit()
@@ -310,14 +301,14 @@ class WorkerDataDB(object):
             
             if isPending == True:
                 if isDescending == True:
-                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NULL  ORDER BY id DESC LIMIT %d'%limit
+                    query = 'SELECT request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NULL  ORDER BY started_date DESC LIMIT %d'%limit
                 else:
-                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NULL  ORDER BY id LIMIT %d'%limit
+                    query = 'SELECT request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NULL  ORDER BY started_date ASC LIMIT %d'%limit
             else:
                 if isDescending == True:
-                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NOT NULL ORDER BY id DESC LIMIT %d'%limit
+                    query = 'SELECT request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NOT NULL ORDER BY started_date DESC LIMIT %d'%limit
                 else:
-                    query = 'SELECT id,request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NOT NULL ORDER BY id LIMIT %d'%limit
+                    query = 'SELECT request_id, worker_id,fib_id,fib_value, retry_count, started_date,finished_date FROM workerdata WHERE finished_date IS NOT NULL ORDER BY started_date ASC LIMIT %d'%limit
             
             cur = db.cursor()
             cur.execute(query)

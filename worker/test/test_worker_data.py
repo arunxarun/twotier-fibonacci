@@ -49,7 +49,7 @@ class Test(unittest.TestCase):
     def test1AddWorkerDataAtStart(self):
         
         workerDataDB = initializeWorkerDataDB(self.testName)
-        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3})
+        workerData = WorkerData(None, {"request_id":"foo1","worker_id":"abcd","fib_id":3})
         
         newWorkerData = workerDataDB.addWorkerData(workerData)
         
@@ -60,7 +60,7 @@ class Test(unittest.TestCase):
     def test2GetWorkerData(self):
         
         workerDataDB = initializeWorkerDataDB(self.testName)
-        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3})
+        workerData = WorkerData(None, {"request_id":"foo1","worker_id":"abcd","fib_id":3})
         
         newWorkerData = workerDataDB.addWorkerData(workerData)
         
@@ -82,7 +82,7 @@ class Test(unittest.TestCase):
         workerDataDB = initializeWorkerDataDB(self.testName)
         lastCheckinDate = nowInSeconds()
         lastCheckinDate = lastCheckinDate-5
-        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3,"started_date":nowInSeconds()-5})
+        workerData = WorkerData(None, {"request_id":"foo1","worker_id":"abcd","fib_id":3,"started_date":nowInSeconds()-5})
         
         newWorkerData = workerDataDB.addWorkerData(workerData)
         
@@ -96,10 +96,10 @@ class Test(unittest.TestCase):
     def testGetPendingWorkItems(self):
         
         workerDataDB = initializeWorkerDataDB(self.testName)
-        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3})
+        workerData = WorkerData(None, {"request_id":"foo1","worker_id":"abcd","fib_id":3})
         workerDataDB.addWorkerData(workerData)
     
-        workerData = WorkerData(None, {"request_id":2,"worker_id":"efgh","fib_id":5})
+        workerData = WorkerData(None, {"request_id":"foo2","worker_id":"efgh","fib_id":5})
         workerDataDB.addWorkerData(workerData)
         
         timestamp = nowInSeconds()
@@ -118,11 +118,11 @@ class Test(unittest.TestCase):
         workerDataDB = initializeWorkerDataDB(self.testName)
         startDate = nowInSeconds()- 5;
         
-        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3,"startedDate":startDate})
+        workerData = WorkerData(None, {"request_id":"foo1","worker_id":"abcd","fib_id":3,"startedDate":startDate})
         workerDataDB.addWorkerData(workerData)
         workerData.fibValue = 3
         workerDataDB.updateWorkerData(workerData)
-        workerData = WorkerData(None, {"request_id":2,"worker_id":"efgh","fib_id":5,"startedDate":startDate})
+        workerData = WorkerData(None, {"request_id":"foo2","worker_id":"efgh","fib_id":5,"startedDate":startDate})
         
         workerDataDB.addWorkerData(workerData)
         workerData.fibValue = 8
@@ -145,7 +145,7 @@ class Test(unittest.TestCase):
 
     def testUpdateRetryCount(self):
         workerDataDB = initializeWorkerDataDB(self.testName)
-        workerData = WorkerData(None, {"request_id":1,"worker_id":"abcd","fib_id":3})
+        workerData = WorkerData(None, {"request_id":"foo1","worker_id":"abcd","fib_id":3})
         workerDataDB.addWorkerData(workerData)
         
         newRetryCount = workerData.retryCount  = workerData.retryCount+1

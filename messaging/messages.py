@@ -130,7 +130,7 @@ class MessageQueue:
         connection = pika.BlockingConnection(parameters)
         self.channel = connection.channel() 
         self.queueName = queueName
-        self.channel.queue_declare(queue=self.queueName)
+        self.channel.queue_declare(queue=self.queueName, durable=True)
         connection.close()
         
         

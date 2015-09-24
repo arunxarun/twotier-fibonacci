@@ -43,13 +43,14 @@ def doWork(jobMessageQueue, resultsMessageQueue, workerDataDB, workerId):
             workerData = WorkerData(body=dataMap)
             log.debug("worker %s starting Fibonnaci on %d at %s"%(workerId,workerData.fibId,prettyPrintTime(nowInSeconds())) )
             
-            # BUGBUG: need to check that this already hasn't been attempted, and 
-            # then remove it from the database. 
-            
+                
             addedWorkerData = workerDataDB.getWorkerData(requestId = workerData.requestId)
             
             if addedWorkerData != None:
-                workerData.retryCount = workerData.retryCount + 1
+                # if this is already in progress with another worker 
+                if addedWorkerData.workerId == workerId:
+                    log.error("expecting that this data was being worked on by a different worker, not %s"%workerId)
+                workerData.retryCount = addedWorkerData.retryCount + 1
                 workerDataDB.updateWorkerData(workerData)
             else:
                 addedWorkerData = workerDataDB.addWorkerData(workerData)

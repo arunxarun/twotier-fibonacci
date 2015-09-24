@@ -41,7 +41,7 @@ class FibDataRequest(object):
             fibDataLogger.debug("initializing from JSON")
             
             if body.has_key('request_id') == True:
-                self.requestId = int(body['request_id'])
+                self.requestId = body['request_id']
             else:
                 self.requestId = -1
             
@@ -115,7 +115,7 @@ class FibDataDB(object):
         
         try:
             db = self.connectToDB()
-            fibdataTableCreate = 'CREATE TABLE IF NOT EXISTS fibdata( request_id int not null auto_increment, fib_id int not null, fib_value bigint not null, started_date int not null, finished_date int,PRIMARY KEY(request_id));'
+            fibdataTableCreate = 'CREATE TABLE IF NOT EXISTS fibdata( request_id char(100) not null, fib_id int not null, fib_value bigint not null, started_date int not null, finished_date int,PRIMARY KEY(request_id));'
             
             cur = db.cursor()
     
@@ -189,24 +189,15 @@ class FibDataDB(object):
             
             
             if request.finishedDate == None:
-                self.log.debug("adding request into database with  fib_id = %d, fib_value = %d and started_date = %d"%(request.fibId,request.fibValue,request.startedDate))
-                query = "insert into fibdata(fib_id,fib_value,started_date) values(%d, %d,%d)"%( request.fibId, request.fibValue,request.startedDate)
+                self.log.debug("adding request into database with  request_id = %s, fib_id = %d, fib_value = %d and started_date = %d"%(request.requestId,request.fibId,request.fibValue,request.startedDate))
+                query = "insert into fibdata(request_id,fib_id,fib_value,started_date) values('%s', %d, %d,%d)"%( request.requestId,request.fibId, request.fibValue,request.startedDate)
             else:
-                self.log.debug("adding request into database with fib_id = %d, fib_value = %d, started_date = %d, finished_date = %d"%(request.fibId,request.fibValue,request.startedDate,request.finishedDate))
-                query = "insert into fibdata( fib_id,fib_value,started_date,finished_date) values(%d, %d,%d,%d)"%(request.fibId, request.fibValue,request.startedDate,request.finishedDate)
+                self.log.debug("adding request into database with request_id = %s, fib_id = %d, fib_value = %d, started_date = %d, finished_date = %d"%(request.requestId,request.fibId,request.fibValue,request.startedDate,request.finishedDate))
+                query = "insert into fibdata(request_id,fib_id,fib_value,started_date,finished_date) values('%s',%d, %d,%d,%d)"%(request.requestId,request.fibId, request.fibValue,request.startedDate,request.finishedDate)
             
             
             cur.execute(query)
             db.commit()
-            
-            # get generated ID - THIS IS VALID PER CONNECTION
-            
-            query = "SELECT LAST_INSERT_ID()"
-            cur.execute(query)
-            
-            row = cur.fetchone()
-            request_id = row[0]
-            request.requestId = request_id
             
             self.disconnectFromDB(db)
             
@@ -223,7 +214,7 @@ class FibDataDB(object):
         try:
             
             db = self.connectToDB()
-            query = 'select request_id,fib_id, fib_value,started_date, finished_date from fibdata where request_id = %d'%requestId
+            query = "select request_id,fib_id, fib_value,started_date, finished_date from fibdata where request_id = '%s'"%requestId
             
             cur = db.cursor()
             cur.execute(query)
@@ -252,8 +243,8 @@ class FibDataDB(object):
             db = self.connectToDB()
             cur = db.cursor()
             finishedDate = nowInSeconds()
-            self.log.debug("updating request  with fib_id = %d and fib_value = %d and requestId = %d"%(request.fibId,request.fibValue,request.requestId))
-            query = "update fibdata  set fib_value=%d,finished_date=%d where request_id = %d"%(request.fibValue,finishedDate, request.requestId)
+            self.log.debug("updating request  with fib_id = %d and fib_value = %d and requestId = '%s'"%(request.fibId,request.fibValue,request.requestId))
+            query = "update fibdata  set fib_value=%d,finished_date=%d where request_id = '%s'"%(request.fibValue,finishedDate, request.requestId)
             cur.execute(query)
             db.commit()
             self.disconnectFromDB(db)
