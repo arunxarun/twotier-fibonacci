@@ -4,11 +4,11 @@ fibonacci broken out between web and worker tier
 to deploy to a remote HP Helion Development Platform Trial cluster, installed following instructions at http://docs.hpcloud.com/helion/devplatform/1.1/ALS-developer-trial-quick-start/
 
 
-1. run ./prep-deploy.sh
+1. run ./prep-deploy.sh if on *nix, or ./prep_deploy.ps1 if on Windows (via powershell)
 2. cd deploy
 3. helion push -n
 
-Or you can deploy individual services from web and worker directories respectively. The deploy directory is created to copy shared resources into deploy directories. 
+Or you can deploy individual services from ./deploy/web and ./deploy/worker directories respectively. The deploy directory is created so that shared resources can be copied into web and worker directories.
 
 required services:
 * rabbit-mq
